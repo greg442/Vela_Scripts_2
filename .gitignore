@@ -1,0 +1,34 @@
+# Never commit credentials or client data
+.env
+*.env
+*.key
+*.pem
+*.p12
+rclone.conf
+openclaw.json
+*.bak
+*.bak.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+__MACOSX/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+*.log
+
+# Build artifacts
+*.docx
+*.pdf
+*.xlsx
+
+# Client configs (never commit these)
+client-configs/
+workspace-*/

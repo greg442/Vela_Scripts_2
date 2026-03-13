@@ -1,108 +1,125 @@
 # VELA Executive Intelligence Systems
-### Private AI Executive Team — Installation Scripts
+### Private AI Executive Team
 
-> **PROPRIETARY & CONFIDENTIAL**  
-> This repository is private. Unauthorized access, distribution, or reproduction is prohibited.  
-> © 2026 Greg Shindler. All rights reserved.
-
----
+> PROPRIETARY AND CONFIDENTIAL
+> This repository is private. Unauthorized access or distribution is prohibited.
+> 2026 Greg Shindler. All rights reserved.
 
 ## One-Line Install
 
-Open Terminal on your Mac Mini and paste this:
+Open Terminal on your Mac Mini:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/install.sh | bash
-```
+    curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/install.sh | bash
 
-That's it. The installer downloads everything it needs and walks you through the rest.
-
-**Estimated time:** 20–40 minutes (Ollama model downloads are the slow part).
-
----
+Estimated time: 20-40 minutes.
 
 ## Before You Run This
 
-You need credentials ready before the install begins. Read the **README First** document provided with your VELA package — it tells you exactly what to collect and where to get it.
+Required credentials:
+- Anthropic API key: console.anthropic.com/settings/keys
+- Telegram Bot Token (Hannah): t.me/BotFather
+- Telegram User ID + Group ID: t.me/userinfobot
+- Gmail address to monitor
+- Google OAuth credentials: console.cloud.google.com
 
-**Required before install:**
-- Anthropic API key — [console.anthropic.com](https://console.anthropic.com/settings/keys)
-- Telegram Bot Token — [t.me/BotFather](https://t.me/BotFather)
-- Telegram User ID + Group ID — [t.me/userinfobot](https://t.me/userinfobot)
-- Gmail address(es) you want monitored
-- Google OAuth credentials — [console.cloud.google.com](https://console.cloud.google.com/apis/credentials)
-- Tailscale account — [tailscale.com](https://tailscale.com)
-- Google Drive backup folder ID
+Turnkey clients (provided by installer):
+- VELA Monitor bot token
+- VELA Monitor chat ID
+- Tailscale auth key
 
----
+## Agent Roster
 
-## What Gets Installed
+All agents run on claude-sonnet-4-6 with 1-hour cache and 200k context window.
 
-| Script | Purpose |
-|--------|---------|
-| `vela_install.sh` | Full system install — Homebrew, Node, Python, Ollama, OpenClaw, all agents |
-| `install_uptime_kuma.sh` | Service monitoring dashboard on port 3001 |
-| `backup_gdrive.sh` | Nightly Google Drive backup with Telegram confirmation |
-| `cost_alert.py` | Daily Anthropic spend check with Telegram escalation alerts |
-| `email_triage.py` | Email classification via local Ollama — runs every 15 min |
-| `reset_sessions.sh` | Clears bloated session files — runs 2x daily via cron |
-| `backup_local.sh` | Local archive backup — runs nightly, keeps 7 days |
+| Agent | Role |
+|-------|------|
+| cos | Hannah - Chief of Staff |
+| researcher | Deep research and intelligence briefs |
+| analyst | Financial models, data analysis |
+| legal | Contract review, risk flagging |
+| marketing | Copy, positioning, campaigns |
+| pm | Project tracking, deadlines, blockers |
+| cos-triage | Lightweight local triage (Ollama) |
 
----
+## Post-Install: Monitoring Setup (Turnkey)
 
-## Running Individual Scripts
+Step 1 - Health checks and client config:
 
-After initial install, scripts live at `~/.openclaw/scripts/`. You can also run them directly from this repo:
+    bash ~/.openclaw/scripts/monitoring/setup_monitoring.sh
 
-```bash
-# Install or update Uptime Kuma
-curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/install_uptime_kuma.sh | bash
+Prompts for client name and VELA Monitor credentials.
+Installs a 15-minute health check cron. Alerts your installer via Telegram if anything breaks.
 
-# Set up Google Drive backup (first time)
-curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/backup_gdrive.sh -o ~/backup_gdrive.sh
-chmod +x ~/backup_gdrive.sh && ~/backup_gdrive.sh --setup
+Step 2 - Remote access:
 
-# Run a manual backup
-curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/backup_gdrive.sh | bash
+    bash ~/.openclaw/scripts/monitoring/setup_tailscale.sh
 
-# Test cost alerting
-curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/cost_alert.py | python3
-```
+Connects Mac Mini to VELA remote monitoring network.
 
----
+## AI Operating Costs
 
-## System Requirements
+Paid directly to Anthropic - not to VELA.
 
-- Mac Mini M4 — 16 GB RAM minimum, 32 GB recommended
-- macOS 14 (Sonoma) or newer
-- Ethernet connection (not WiFi)
-- 50 GB free disk space
-- Admin account
+| Usage Level | Monthly Cost |
+|-------------|-------------|
+| Light | 75-100 USD |
+| Active daily use | 200-350 USD |
+| Heavy power user | Up to 500 USD |
 
----
+## Useful Commands
+
+    # Gateway
+    openclaw gateway status
+    openclaw gateway stop && openclaw gateway install && openclaw gateway start
+
+    # Check context size
+    openclaw agent --agent cos --message "What is your current context size in tokens?" --local
+
+    # Health check manual run
+    bash ~/.openclaw/scripts/monitoring/health_check.sh
+
+    # Logs
+    tail -50 ~/.openclaw/logs/health_check.log
+    tail -50 ~/.openclaw/logs/gateway.log
+
+    # Tailscale
+    tailscale status
+
+## Pricing
+
+| Tier | Price | Includes |
+|------|-------|---------|
+| Done For You | 10000 USD one-time | Mac Mini M4 configured and shipped, full install, all agents briefed, Telegram + WhatsApp + Gmail + Drive connected, 12 months remote monitoring |
+| Done With You | 5000 USD one-time | GitHub access, install scripts, guided session, 30 days support. Monitoring: 250 USD/month. |
 
 ## Repository Structure
 
-```
-vela-scripts/
-├── install.sh                  ← Entry point — the one-line install
-├── scripts/
-│   ├── vela_install.sh         ← Full system installer
-│   ├── install_uptime_kuma.sh  ← Monitoring dashboard
-│   ├── backup_gdrive.sh        ← Google Drive backup
-│   ├── backup_local.sh         ← Local archive backup
-│   ├── cost_alert.py           ← Daily spend alerting
-│   ├── email_triage.py         ← Email classification
-│   └── reset_sessions.sh       ← Session hygiene
-└── docs/
-    └── (documentation PDFs — not stored in repo)
-```
-
----
+    vela-scripts/
+    ├── install.sh
+    ├── scripts/
+    │   ├── vela_install.sh
+    │   ├── reset_sessions.sh
+    │   ├── backup_gdrive.sh
+    │   ├── backup_local.sh
+    │   ├── cost_alert.py
+    │   ├── email_triage.py
+    │   └── monitoring/
+    │       ├── setup_monitoring.sh
+    │       ├── health_check.sh
+    │       ├── setup_tailscale.sh
+    │       └── vela_client.conf.template
+    └── templates/
+        ├── workspace-cos/
+        ├── workspace-researcher/
+        ├── workspace-analyst/
+        ├── workspace-legal/
+        ├── workspace-marketing/
+        └── workspace-pm/
 
 ## Support
 
-This system is maintained by VELA Executive Intelligence Systems.  
-Contact: Greg Shindler — [your email here]
+VELA Executive Intelligence Systems
+greg@gregshindler.com
+By introduction only
 
-For remote support, ensure Tailscale is running on your Mac Mini.
+For remote support ensure Tailscale is running: tailscale status

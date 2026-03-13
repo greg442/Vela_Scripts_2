@@ -216,7 +216,8 @@ success ".env written (chmod 600)"
 
 openclaw config set providers.anthropic.apiKey "$ANTHROPIC_KEY" 2>/dev/null || true
 openclaw config set providers.ollama.baseUrl "http://localhost:11434" 2>/dev/null || true
-openclaw config set agents.defaults.models."anthropic/claude-sonnet-4-6".params.cacheRetention short 2>/dev/null || true
+openclaw config set agents.defaults.models."anthropic/claude-sonnet-4-6".params.cacheRetention long 2>/dev/null || true
+openclaw config set agents.defaults.contextTokens 200000 2>/dev/null || true
 openclaw config set channels.telegram.enabled true 2>/dev/null || true
 openclaw config set channels.telegram.botToken "$TELEGRAM_TOKEN" 2>/dev/null || true
 openclaw config set channels.telegram.dmPolicy "pairing" 2>/dev/null || true
@@ -304,7 +305,7 @@ CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null > "$CRON_TMP" || true
 add_cron() { grep -qF "$1" "$CRON_TMP" || echo "$1" >> "$CRON_TMP"; }
 add_cron "*/15 8-18 * * 1-5 python3 $SCRIPTS_DIR/email_triage.py"
-add_cron "0 3,14 * * * bash $SCRIPTS_DIR/reset_sessions.sh"
+add_cron "0 3 * * * bash $SCRIPTS_DIR/reset_sessions.sh"
 add_cron "0 18 * * 1-5 python3 $SCRIPTS_DIR/cost_alert.py"
 add_cron "0 2 * * * bash $SCRIPTS_DIR/backup_local.sh"
 crontab "$CRON_TMP"; rm "$CRON_TMP"

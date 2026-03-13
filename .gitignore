@@ -33,3 +33,12 @@ node_modules/
 client-configs/
 /workspace-*/
 !templates/workspace-*/
+
+# Google Drive auth (never commit — contains OAuth credentials)
+.drive_auth.json
+
+# Google Drive auth (never commit — contains OAuth credentials)
+.drive_auth.json
+
+# Google Drive auth (never commit — contains OAuth credentials)
+.drive_auth.json

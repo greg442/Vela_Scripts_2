@@ -29,7 +29,7 @@ fi
 CONFIG_FILE="$HOME/.openclaw/vela_client.conf"
 [ -f "$CONFIG_FILE" ] && source "$CONFIG_FILE"
 HOSTNAME="vela-${CLIENT_NAME:-client}"
-HOSTNAME="${HOSTNAME,,}"
+HOSTNAME=$(echo "$HOSTNAME" | tr "[:upper:]" "[:lower:]")
 HOSTNAME="${HOSTNAME// /-}"
 
 read -p "Enter VELA Tailscale auth key (tskey-auth-...): " AUTH_KEY

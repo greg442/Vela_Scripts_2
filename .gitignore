@@ -31,4 +31,5 @@ node_modules/
 
 # Client configs (never commit these)
 client-configs/
-workspace-*/
+/workspace-*/
+!templates/workspace-*/

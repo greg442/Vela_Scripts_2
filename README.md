@@ -1,125 +1,123 @@
-# VELA Executive Intelligence Systems
-### Private AI Executive Team
+# VELA Private Command Infrastructure
+## Vela_Scripts_2 — Multi-Tenant Deployment Repository
 
-> PROPRIETARY AND CONFIDENTIAL
-> This repository is private. Unauthorized access or distribution is prohibited.
-> 2026 Greg Shindler. All rights reserved.
+> Your judgment. Our infrastructure.
 
-## One-Line Install
+Private repository. Do not share.
 
-Open Terminal on your Mac Mini:
+---
 
-    curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/install.sh | bash
+## For Clients
 
-Estimated time: 20-40 minutes.
+Paste this into Terminal on your Mac Mini:
 
-## Before You Run This
+```bash
+curl -fsSL https://raw.githubusercontent.com/greg442/Vela_Scripts_2/main/install.sh | bash
+```
 
-Required credentials:
-- Anthropic API key: console.anthropic.com/settings/keys
-- Telegram Bot Token (Hannah): t.me/BotFather
-- Telegram User ID + Group ID: t.me/userinfobot
-- Gmail address to monitor
-- Google OAuth credentials: console.cloud.google.com
+You will need your **VELA License Key** — provided by your installer.
 
-Turnkey clients (provided by installer):
-- VELA Monitor bot token
-- VELA Monitor chat ID
-- Tailscale auth key
+See `README_First.pdf` (delivered separately) to collect all required credentials before running this.
 
-## Agent Roster
-
-All agents run on claude-sonnet-4-6 with 1-hour cache and 200k context window.
-
-| Agent | Role |
-|-------|------|
-| cos | Hannah - Chief of Staff |
-| researcher | Deep research and intelligence briefs |
-| analyst | Financial models, data analysis |
-| legal | Contract review, risk flagging |
-| marketing | Copy, positioning, campaigns |
-| pm | Project tracking, deadlines, blockers |
-| cos-triage | Lightweight local triage (Ollama) |
-
-## Post-Install: Monitoring Setup (Turnkey)
-
-Step 1 - Health checks and client config:
-
-    bash ~/.openclaw/scripts/monitoring/setup_monitoring.sh
-
-Prompts for client name and VELA Monitor credentials.
-Installs a 15-minute health check cron. Alerts your installer via Telegram if anything breaks.
-
-Step 2 - Remote access:
-
-    bash ~/.openclaw/scripts/monitoring/setup_tailscale.sh
-
-Connects Mac Mini to VELA remote monitoring network.
-
-## AI Operating Costs
-
-Paid directly to Anthropic - not to VELA.
-
-| Usage Level | Monthly Cost |
-|-------------|-------------|
-| Light | 75-100 USD |
-| Active daily use | 200-350 USD |
-| Heavy power user | Up to 500 USD |
-
-## Useful Commands
-
-    # Gateway
-    openclaw gateway status
-    openclaw gateway stop && openclaw gateway install && openclaw gateway start
-
-    # Check context size
-    openclaw agent --agent cos --message "What is your current context size in tokens?" --local
-
-    # Health check manual run
-    bash ~/.openclaw/scripts/monitoring/health_check.sh
-
-    # Logs
-    tail -50 ~/.openclaw/logs/health_check.log
-    tail -50 ~/.openclaw/logs/gateway.log
-
-    # Tailscale
-    tailscale status
-
-## Pricing
-
-| Tier | Price | Includes |
-|------|-------|---------|
-| Done For You | 10000 USD one-time | Mac Mini M4 configured and shipped, full install, all agents briefed, Telegram + WhatsApp + Gmail + Drive connected, 12 months remote monitoring |
-| Done With You | 5000 USD one-time | GitHub access, install scripts, guided session, 30 days support. Monitoring: 250 USD/month. |
+---
 
 ## Repository Structure
 
-    vela-scripts/
-    ├── install.sh
-    ├── scripts/
-    │   ├── vela_install.sh
-    │   ├── reset_sessions.sh
-    │   ├── backup_gdrive.sh
-    │   ├── backup_local.sh
-    │   ├── cost_alert.py
-    │   ├── email_triage.py
-    │   └── monitoring/
-    │       ├── setup_monitoring.sh
-    │       ├── health_check.sh
-    │       ├── setup_tailscale.sh
-    │       └── vela_client.conf.template
-    └── templates/
-        ├── workspace-cos/
-        ├── workspace-researcher/
-        ├── workspace-analyst/
-        ├── workspace-legal/
-        ├── workspace-marketing/
-        └── workspace-pm/
+```
+Vela_Scripts_2/
+├── install.sh                  # Client entry point — one command
+├── vela_deploy.sh              # Greg's provisioning script — run before each install
+├── README.md
+│
+├── scripts/
+│   ├── vela_install.sh         # Full system installer (called by install.sh)
+│   ├── license_check.py        # License validation — runs at session start + daily cron
+│   ├── email_triage.py         # Email triage pipeline
+│   ├── cost_alert.py           # Daily spend alerting
+│   ├── reset_sessions.sh       # Session hygiene
+│   ├── backup_gdrive.sh        # Nightly Google Drive backup
+│   ├── backup_local.sh         # Local archive backup
+│   ├── deliver_report.py       # Agent document delivery to Drive + Telegram
+│   ├── install_uptime_kuma.sh  # Uptime Kuma monitoring
+│   └── monitoring/
+│       ├── setup_monitoring.sh
+│       ├── health_check.sh
+│       └── setup_tailscale.sh
+│
+├── templates/                  # Workspace files — {{CLIENT_*}} injected at install
+│   ├── workspace-cos/          # Hannah's workspace
+│   ├── workspace-analyst/
+│   ├── workspace-researcher/
+│   ├── workspace-marketing/
+│   ├── workspace-legal/
+│   └── workspace-pm/
+│
+├── license_server/             # Runs on DigitalOcean droplet
+│   ├── server.py               # Flask validation API
+│   ├── schema.sql              # SQLite schema
+│   ├── admin.py                # Your management CLI
+│   └── requirements.txt
+│
+└── docs/
+    ├── ADMIN.md                # Operator reference
+    └── DEPLOY.md               # DigitalOcean setup guide
+```
 
-## Support
+---
 
-VELA Executive Intelligence Systems
-greg@gregshindler.com
-By introduction only
+## Operator Workflow
 
-For remote support ensure Tailscale is running: tailscale status
+### Before each install
+
+```bash
+bash vela_deploy.sh
+```
+
+This generates the license key, prints the SQL to activate it, creates the client manifest, and gives you the install checklist.
+
+### During install call
+
+- Client pastes the one-liner above into Terminal
+- You watch via Tailscale SSH: `ssh [username]@vela-[client_id]`
+- Install takes 30–90 minutes depending on model download speed
+
+### Managing clients
+
+```bash
+# From your Mac, configure once:
+cat > ~/.vela_admin.conf << EOF
+VELA_SERVER_URL=https://license.vela.run
+VELA_ADMIN_KEY=your-admin-key
+EOF
+
+# Then:
+python3 license_server/admin.py list
+python3 license_server/admin.py status client_id
+python3 license_server/admin.py suspend client_id    # kill switch
+python3 license_server/admin.py reinstate client_id
+python3 license_server/admin.py ping-report          # who hasn't checked in
+```
+
+---
+
+## License Server
+
+Runs on a $5 DigitalOcean droplet at `license.vela.run`.
+
+See `docs/DEPLOY.md` for full setup instructions.
+
+---
+
+## Tiers
+
+| Tier | Agents | Features |
+|------|--------|----------|
+| command | All 6 (Hannah + 5 specialists) | Full — briefs, triage, WhatsApp, Drive |
+| standard | 3 (Hannah, PM, Researcher) | Briefs + triage only |
+
+Upgrade = one field change server-side. No reinstall.
+
+---
+
+*PROPRIETARY & CONFIDENTIAL — Greg Shindler / VELA Private Command Infrastructure*
+*© 2026. All rights reserved.*

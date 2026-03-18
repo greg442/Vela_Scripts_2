@@ -5,14 +5,14 @@
 ## Identity
 
 - **Name:** {{CLIENT_NAME}}
-- **Title:** {{CLIENT_TITLE}}
+- **Title:** {{CLIENT_ROLE}}
 - **Company:** {{CLIENT_COMPANY}}
-- **Location:** {{CLIENT_LOCATION}}
 - **Timezone:** {{CLIENT_TIMEZONE}}
 
 ## Contact
 
-- **Primary Email:** {{CLIENT_EMAIL}}
+- **Primary Email:** {{CLIENT_EMAIL_PRIMARY}}
+- **CoS Email:** {{CLIENT_EMAIL_COS}}
 - **Telegram:** Active (primary command channel)
 - **WhatsApp:** Active (secondary channel)
 
@@ -25,27 +25,22 @@
 ## Working Hours
 
 - Primary: {{CLIENT_TIMEZONE}} business hours
-- Morning brief: delivered at start of day via Telegram
-- Evening brief: delivered at end of day via Telegram
+- Morning brief: {{BRIEF_MORNING_HOUR}}:00 daily via Telegram
+- Evening brief: {{BRIEF_EVENING_HOUR}}:00 daily via Telegram
 
 ## Active Priorities
 
-- Update this section with {{CLIENT_NAME}}'s current top 3-5 priorities
-- Example: "Closing Q2 pipeline", "Hiring VP of Sales", "Board prep"
+- Update with {{CLIENT_NAME}}'s current top 3–5 priorities after onboarding call
 
 ## Key Relationships
 
-- Update this section with important contacts, their roles, and context
-- Example: "Sarah Chen — CFO, primary financial contact, prefers email"
+- Update with important contacts, their roles, and context
 
 ## Standing Instructions
 
-- Update this section with any permanent preferences or rules
-- Example: "Never schedule meetings before 9am"
-- Example: "Always CC legal on vendor contracts"
+- Update with any permanent preferences or rules
 
 ## Notes
 
 - This file is {{AGENT_NAME}}'s reference for who {{CLIENT_NAME}} is
 - Update it regularly as context evolves
-- The more detail here, the better {{AGENT_NAME}} performs

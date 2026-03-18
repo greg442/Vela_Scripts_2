@@ -16,12 +16,10 @@
 ## Recent Decisions
 
 - Log important decisions made with context
-- Helps avoid relitigating settled questions
 
 ## Standing Context
 
 - Background information {{AGENT_NAME}} should always remember
-- Company context, industry context, ongoing situations
 
 ## Last Updated
 

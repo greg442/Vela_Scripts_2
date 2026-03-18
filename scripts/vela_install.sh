@@ -1,398 +1,476 @@
 #!/usr/bin/env bash
 # ============================================================
-#  VELA Executive Intelligence Systems
-#  Client Installation Script — vela_install.sh v2.0
-#  March 2026
+#  VELA Private Command Infrastructure
+#  Full System Installer — vela_install.sh
+#  Version 2.0 — March 2026
 #
-#  Run via:
-#  curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/install.sh | bash
+#  Called by install.sh after license validation and info
+#  collection. All CLIENT_* variables are pre-exported.
 #
-#  Greg Shindler / VELA Executive Intelligence Systems
-#  PROPRIETARY & CONFIDENTIAL
+#  Do not run this directly. Use install.sh.
 # ============================================================
 
 set -euo pipefail
 
-VELA_VERSION="2.0.0"
-OPENCLAW_DIR="$HOME/.openclaw"
-SCRIPTS_DIR="$OPENCLAW_DIR/scripts"
-LOG_DIR="$OPENCLAW_DIR/logs"
-TEMPLATE_BASE_URL="https://raw.githubusercontent.com/greg442/vela_scripts/main/templates"
-
-GOLD='\033[0;33m'; GREEN='\033[0;32m'; RED='\033[0;31m'
-BOLD='\033[1m'; GRAY='\033[0;90m'; CYAN='\033[0;36m'; RESET='\033[0m'
+GOLD='\033[0;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
+GRAY='\033[0;90m'
+RESET='\033[0m'
 
 log()     { echo -e "${GOLD}▸${RESET} $1"; }
 success() { echo -e "${GREEN}✓${RESET} $1"; }
 warn()    { echo -e "${GOLD}⚠${RESET}  $1"; }
-error()   { echo -e "${RED}✗  ERROR: $1${RESET}"; exit 1; }
+error()   { echo -e "${RED}✗${RESET} $1"; exit 1; }
 hr()      { echo -e "${GRAY}────────────────────────────────────────────────────${RESET}"; }
-header()  { echo ""; hr; echo -e "  ${BOLD}${GOLD}$1${RESET}"; hr; echo ""; }
+section() { echo -e "\n${BLUE}${BOLD}$1${RESET}"; hr; }
 
-# ── BANNER ──────────────────────────────────────────────────
-clear
-echo -e "${GOLD}"
-cat << 'BANNER'
- __   __ ____  _        _
- \ \ / /| ___|| |      / \
-  \ V / |  _| | |     / _ \
-   \_/  |_____||_____|/_/ \_\
+OPENCLAW_DIR="$HOME/.openclaw"
+SCRIPTS_DIR="${OPENCLAW_DIR}/scripts"
+LOGS_DIR="${OPENCLAW_DIR}/logs"
+USERNAME="${CLIENT_USERNAME:-$(whoami)}"
+BASE_PATH="/Users/${USERNAME}/.openclaw"
 
- Executive Intelligence Systems
-BANNER
-echo -e "${RESET}"
-echo -e "  ${BOLD}VELA Installer v${VELA_VERSION}${RESET}"
-hr
-echo ""
-echo -e "  This installer configures a complete AI executive system"
-echo -e "  personalized for you. Estimated time: ${BOLD}20-40 minutes.${RESET}"
-echo ""
-echo -e "  ${GOLD}Have these ready before continuing:${RESET}"
-echo -e "  - Anthropic API key  (console.anthropic.com)"
-echo -e "  - Telegram Bot Token (@BotFather)"
-echo -e "  - Telegram Chat ID   (@userinfobot)"
-echo -e "  - Your Gmail address"
-echo ""
-read -p "  Press Enter to begin, or Ctrl+C to exit..." _
-echo ""
-
-# ════════════════════════════════════════════════════════════
-#  STEP 1 — WHO ARE YOU?
-# ════════════════════════════════════════════════════════════
-header "1 / 9  ABOUT YOU"
-
-echo -e "  ${CYAN}Let's personalize your VELA system.${RESET}"
-echo -e "  Press Enter to accept the default shown in brackets.\n"
-
-while true; do
-  read -p "  Your full name: " CLIENT_NAME
-  [[ -n "$CLIENT_NAME" ]] && break
-  echo "  Name cannot be empty."
-done
-
-read -p "  Your title (e.g. CEO, Founder, Managing Director): " CLIENT_TITLE
-CLIENT_TITLE=${CLIENT_TITLE:-"Executive"}
-
-read -p "  Your company name: " CLIENT_COMPANY
-CLIENT_COMPANY=${CLIENT_COMPANY:-""}
-
-read -p "  Your city/location (e.g. Los Angeles, CA): " CLIENT_LOCATION
-CLIENT_LOCATION=${CLIENT_LOCATION:-""}
-
-echo ""
-echo -e "  ${GRAY}Common timezones:"
-echo -e "  America/New_York  America/Chicago  America/Denver"
-echo -e "  America/Los_Angeles  America/Phoenix  Europe/London${RESET}"
-read -p "  Your timezone [America/New_York]: " CLIENT_TIMEZONE
-CLIENT_TIMEZONE=${CLIENT_TIMEZONE:-"America/New_York"}
-
-echo ""
-echo -e "  ${CYAN}Name your AI Chief of Staff.${RESET}"
-echo -e "  Examples: Hannah, Alex, Jordan, Sage, Morgan\n"
-read -p "  Agent name [Hannah]: " AGENT_NAME
-AGENT_NAME=${AGENT_NAME:-"Hannah"}
-
-echo ""
-read -p "  Morning brief time in 24h format [06:00]: " MORNING_BRIEF
-MORNING_BRIEF=${MORNING_BRIEF:-"06:00"}
-read -p "  Evening brief time in 24h format [17:00]: " EVENING_BRIEF
-EVENING_BRIEF=${EVENING_BRIEF:-"17:00"}
-
-MORNING_H=$(echo "$MORNING_BRIEF" | cut -d: -f1 | sed 's/^0//')
-MORNING_M=$(echo "$MORNING_BRIEF" | cut -d: -f2)
-EVENING_H=$(echo "$EVENING_BRIEF" | cut -d: -f1 | sed 's/^0//')
-EVENING_M=$(echo "$EVENING_BRIEF" | cut -d: -f2)
-
-echo ""
-success "Configuring VELA for: ${CLIENT_NAME} — ${CLIENT_TITLE}"
-success "Agent name: ${AGENT_NAME}"
-success "Briefs: ${MORNING_BRIEF} and ${EVENING_BRIEF} (${CLIENT_TIMEZONE})"
-echo ""
-sleep 2
-
-# ════════════════════════════════════════════════════════════
-#  STEP 2 — CREDENTIALS
-# ════════════════════════════════════════════════════════════
-header "2 / 9  CREDENTIALS"
-
-echo -e "  ${CYAN}Stored securely in ~/.openclaw/.env (owner-only access).${RESET}\n"
-
-read -s -p "  Anthropic API key (sk-ant-...): " ANTHROPIC_KEY; echo ""
-[[ "$ANTHROPIC_KEY" == sk-ant-* ]] || warn "Key doesn't start with sk-ant- — double-check this."
-
-read -p "  Primary Gmail address: " GMAIL_PRIMARY
-read -p "  Secondary Gmail (optional, Enter to skip): " GMAIL_SECONDARY
-
-read -s -p "  Telegram Bot Token: " TELEGRAM_TOKEN; echo ""
-read -p "  Telegram User Chat ID (positive number): " TELEGRAM_CHAT_ID
-read -p "  Telegram Group ID (negative number): " TELEGRAM_GROUP_ID
-
-success "Credentials collected."
-
-# ════════════════════════════════════════════════════════════
-#  STEP 3 — SYSTEM CHECK
-# ════════════════════════════════════════════════════════════
-header "3 / 9  SYSTEM CHECK"
-
-[[ "$(uname)" == "Darwin" ]] || error "macOS required."
-[[ "$(uname -m)" == "arm64" ]] || warn "Not Apple Silicon — performance may vary."
-
-RAM_GB=$(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))
-[[ $RAM_GB -ge 16 ]] || error "16 GB RAM minimum. Found: ${RAM_GB} GB."
-success "macOS $(sw_vers -productVersion) — ${RAM_GB} GB RAM"
-
-curl -s --max-time 8 "https://github.com" > /dev/null 2>&1 || error "No internet connection."
-success "Internet confirmed"
-
-mkdir -p "$OPENCLAW_DIR" "$SCRIPTS_DIR" "$LOG_DIR"
-success "Directories ready"
-
-# ════════════════════════════════════════════════════════════
-#  STEP 4 — HOMEBREW & TOOLS
-# ════════════════════════════════════════════════════════════
-header "4 / 9  HOMEBREW & CORE TOOLS"
+# ── STEP 1 — HOMEBREW ───────────────────────────────────────
+section "Step 1 — Homebrew"
 
 if ! command -v brew &>/dev/null; then
   log "Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
+  eval "$(/opt/homebrew/bin/brew shellenv)"
   success "Homebrew installed"
 else
-  success "Homebrew already installed"
+  success "Homebrew already installed ($(brew --version | head -1))"
 fi
 
-for pkg in node python@3.12 curl git; do
-  brew list "$pkg" &>/dev/null && success "$pkg present" || { log "Installing $pkg..."; brew install "$pkg" --quiet; success "$pkg installed"; }
+# ── STEP 2 — CORE DEPENDENCIES ──────────────────────────────
+section "Step 2 — Core Dependencies"
+
+PACKAGES=(git node python@3.14 curl)
+for pkg in "${PACKAGES[@]}"; do
+  if brew list "$pkg" &>/dev/null; then
+    success "${pkg} already installed"
+  else
+    log "Installing ${pkg}..."
+    brew install "$pkg"
+    success "${pkg} installed"
+  fi
 done
 
-pip3 install --quiet --break-system-packages requests google-auth google-auth-oauthlib google-api-python-client 2>/dev/null || true
-success "Python packages ready"
+# gog-wrapper
+if ! command -v gog-wrapper &>/dev/null 2>&1; then
+  log "Installing gog-wrapper..."
+  npm install -g gog-wrapper 2>/dev/null && success "gog-wrapper installed" || warn "gog-wrapper install failed — install manually: npm install -g gog-wrapper"
+else
+  success "gog-wrapper already installed"
+fi
 
-# ════════════════════════════════════════════════════════════
-#  STEP 5 — OLLAMA & MODELS
-# ════════════════════════════════════════════════════════════
-header "5 / 9  OLLAMA & LOCAL AI MODELS"
+# ── STEP 3 — OLLAMA + MODELS ────────────────────────────────
+section "Step 3 — Ollama + Local Models"
 
-command -v ollama &>/dev/null || { log "Installing Ollama..."; brew install ollama --quiet; success "Ollama installed"; }
-success "Ollama ready"
+if ! command -v ollama &>/dev/null; then
+  log "Installing Ollama..."
+  brew install ollama
+  success "Ollama installed"
+else
+  success "Ollama already installed"
+fi
 
-ollama serve > /tmp/ollama.log 2>&1 & sleep 3
+log "Starting Ollama server..."
+ollama serve &>/dev/null &
+sleep 3
 
-log "Pulling qwen2.5:7b (this takes a few minutes on first run)..."
-ollama pull qwen2.5:7b 2>/dev/null && success "qwen2.5:7b ready" || warn "qwen2.5:7b pull failed — retry: ollama pull qwen2.5:7b"
+log "Pulling local models (this takes 15–30 minutes on first run)..."
+echo -e "  ${GRAY}qwen2.5:7b  — 4.5 GB — PM and Researcher agents${RESET}"
+echo -e "  ${GRAY}llama3.1:8b — 4.9 GB — secondary / fallback${RESET}"
+echo ""
 
-[[ $RAM_GB -ge 32 ]] && { log "32 GB RAM — pulling qwen2.5:14b..."; ollama pull qwen2.5:14b 2>/dev/null && success "qwen2.5:14b ready" || warn "qwen2.5:14b pull failed"; }
+ollama pull qwen2.5:7b  && success "qwen2.5:7b ready"
+ollama pull llama3.1:8b && success "llama3.1:8b ready"
 
-# ════════════════════════════════════════════════════════════
-#  STEP 6 — OPENCLAW
-# ════════════════════════════════════════════════════════════
-header "6 / 9  OPENCLAW"
+# ── STEP 4 — OPENCLAW ───────────────────────────────────────
+section "Step 4 — OpenClaw"
 
-command -v openclaw &>/dev/null || { log "Installing OpenClaw..."; npm install -g openclaw --quiet 2>/dev/null || error "OpenClaw install failed."; success "OpenClaw installed"; }
-success "OpenClaw ready"
+if ! command -v openclaw &>/dev/null; then
+  log "Installing OpenClaw..."
+  brew install --cask openclaw
+  success "OpenClaw installed"
+else
+  success "OpenClaw already installed ($(openclaw --version 2>/dev/null || echo 'version unknown'))"
+fi
 
-command -v gog &>/dev/null || { log "Installing gog-wrapper..."; npm install -g gog-wrapper --quiet 2>/dev/null || warn "gog-wrapper failed — install manually"; success "gog-wrapper installed"; }
+# ── STEP 5 — DIRECTORY STRUCTURE ────────────────────────────
+section "Step 5 — VELA Directory Structure"
 
-# ════════════════════════════════════════════════════════════
-#  STEP 7 — WRITE CONFIG
-# ════════════════════════════════════════════════════════════
-header "7 / 9  WRITING CONFIGURATION"
+WORKSPACES=(workspace-cos workspace-analyst workspace-marketing workspace-pm workspace-researcher workspace-legal)
+for ws in "${WORKSPACES[@]}"; do
+  mkdir -p "${OPENCLAW_DIR}/${ws}"
+  success "  ${ws}/"
+done
 
-cat > "$OPENCLAW_DIR/.env" << ENVEOF
-ANTHROPIC_API_KEY=${ANTHROPIC_KEY}
-TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
-TELEGRAM_USER_CHAT_ID=${TELEGRAM_CHAT_ID}
-TELEGRAM_GROUP_ID=${TELEGRAM_GROUP_ID}
-GMAIL_PRIMARY=${GMAIL_PRIMARY}
-GMAIL_SECONDARY=${GMAIL_SECONDARY}
-CLIENT_NAME=${CLIENT_NAME}
-AGENT_NAME=${AGENT_NAME}
-CLIENT_TIMEZONE=${CLIENT_TIMEZONE}
-OLLAMA_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5:7b
-ENVEOF
-chmod 600 "$OPENCLAW_DIR/.env"
-success ".env written (chmod 600)"
+mkdir -p "${OPENCLAW_DIR}/workspace-cos/memory"
+mkdir -p "${OPENCLAW_DIR}/workspace-cos/reference"
+mkdir -p "${OPENCLAW_DIR}/workspace-cos/archive"
+mkdir -p "${OPENCLAW_DIR}/workspace-cos/scripts"
+mkdir -p "${SCRIPTS_DIR}/monitoring"
+mkdir -p "${LOGS_DIR}"
 
-openclaw config set providers.anthropic.apiKey "$ANTHROPIC_KEY" 2>/dev/null || true
+success "Directory structure created"
+
+# ── STEP 6 — API KEYS + ENV ──────────────────────────────────
+section "Step 6 — API Keys and Environment"
+
+ENV_FILE="${OPENCLAW_DIR}/.env"
+cat > "$ENV_FILE" << EOF
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+VELA_LICENSE_KEY=${VELA_LICENSE_KEY}
+VELA_CLIENT_NAME=${CLIENT_NAME}
+VELA_CLIENT_COMPANY=${CLIENT_COMPANY}
+VELA_LICENSE_TIER=${LICENSE_TIER}
+EOF
+chmod 600 "$ENV_FILE"
+success "Environment file written"
+
+# Register with OpenClaw
+openclaw config set providers.anthropic.apiKey "${ANTHROPIC_API_KEY}" 2>/dev/null || warn "Could not set Anthropic key via CLI — set manually in openclaw.json"
 openclaw config set providers.ollama.baseUrl "http://localhost:11434" 2>/dev/null || true
-openclaw config set agents.defaults.models."anthropic/claude-sonnet-4-6".params.cacheRetention long 2>/dev/null || true
-openclaw config set agents.defaults.contextTokens 200000 2>/dev/null || true
-openclaw config set channels.telegram.enabled true 2>/dev/null || true
-openclaw config set channels.telegram.botToken "$TELEGRAM_TOKEN" 2>/dev/null || true
-openclaw config set channels.telegram.dmPolicy "pairing" 2>/dev/null || true
-openclaw config set channels.telegram.groupPolicy "allowlist" 2>/dev/null || true
-openclaw config set channels.telegram.streaming "partial" 2>/dev/null || true
-success "OpenClaw + Telegram configured"
+success "API keys configured"
 
-for agent in cos analyst marketing legal; do
-  openclaw agent create "$agent" --model anthropic/claude-sonnet-4-6 2>/dev/null || true
-done
-for agent in pm researcher; do
-  openclaw agent create "$agent" --model ollama/qwen2.5:7b 2>/dev/null || true
-done
-success "6 agents created"
+# ── STEP 7 — TELEGRAM ───────────────────────────────────────
+section "Step 7 — Telegram"
 
-# ════════════════════════════════════════════════════════════
-#  STEP 8 — PERSONALIZED WORKSPACES
-# ════════════════════════════════════════════════════════════
-header "8 / 9  PERSONALIZING WORKSPACES FOR ${CLIENT_NAME}"
+openclaw config set channels.telegram.enabled true
+openclaw config set channels.telegram.botToken "${TELEGRAM_BOT_TOKEN}"
+openclaw config set channels.telegram.dmPolicy "pairing"
+openclaw config set channels.telegram.groupPolicy "allowlist"
+openclaw config set channels.telegram.streaming "partial"
 
-INSTALL_DATE=$(date '+%B %d, %Y')
+# Set group ID as integer array
+python3 << PYEOF
+import json, os
+path = os.path.expanduser('~/.openclaw/openclaw.json')
+with open(path, 'r') as f:
+    c = json.load(f)
+group_id = int("${TELEGRAM_GROUP_ID}".replace('"','').replace("'",""))
+c['channels']['telegram']['groupAllowFrom'] = [group_id]
+with open(path, 'w') as f:
+    json.dump(c, f, indent=2)
+print("  groupAllowFrom set as integer array")
+PYEOF
 
-substitute_tokens() {
-  local file="$1"
-  sed -i '' \
-    -e "s|{{CLIENT_NAME}}|${CLIENT_NAME}|g" \
-    -e "s|{{CLIENT_TITLE}}|${CLIENT_TITLE}|g" \
-    -e "s|{{CLIENT_COMPANY}}|${CLIENT_COMPANY}|g" \
-    -e "s|{{CLIENT_LOCATION}}|${CLIENT_LOCATION}|g" \
-    -e "s|{{CLIENT_TIMEZONE}}|${CLIENT_TIMEZONE}|g" \
-    -e "s|{{CLIENT_EMAIL}}|${GMAIL_PRIMARY}|g" \
-    -e "s|{{AGENT_NAME}}|${AGENT_NAME}|g" \
-    -e "s|{{INSTALL_DATE}}|${INSTALL_DATE}|g" \
-    -e "s|{{MORNING_BRIEF_TIME}}|${MORNING_BRIEF}|g" \
-    -e "s|{{EVENING_BRIEF_TIME}}|${EVENING_BRIEF}|g" \
-    "$file"
+success "Telegram configured"
+
+# ── STEP 8 — WHATSAPP ───────────────────────────────────────
+section "Step 8 — WhatsApp"
+
+openclaw config set channels.whatsapp.enabled true
+openclaw config set channels.whatsapp.dmPolicy "allowlist"
+openclaw config set channels.whatsapp.allowFrom '["*"]'
+openclaw config set channels.whatsapp.groupPolicy "allowlist"
+openclaw config set channels.whatsapp.debounceMs 0
+openclaw config set channels.whatsapp.mediaMaxMb 50
+
+python3 << PYEOF
+import json, os
+path = os.path.expanduser('~/.openclaw/openclaw.json')
+with open(path, 'r') as f:
+    c = json.load(f)
+c['plugins']['allow'] = ['whatsapp']
+c['channels']['bluebubbles']['enabled'] = False
+c['channels']['bluebubbles']['groupPolicy'] = 'open'
+with open(path, 'w') as f:
+    json.dump(c, f, indent=2)
+print("  plugins.allow = ['whatsapp']")
+print("  BlueBubbles disabled")
+PYEOF
+
+success "WhatsApp configured (QR scan required after gateway start)"
+
+# ── STEP 9 — GOOGLE WORKSPACE ───────────────────────────────
+section "Step 9 — Google Workspace"
+
+log "Authenticating Gmail accounts..."
+echo -e "  ${GRAY}A browser window will open. Sign in with your Gmail account.${RESET}"
+echo ""
+
+gog-wrapper auth login -a "${CLIENT_EMAIL_PRIMARY}" && success "Primary Gmail authenticated: ${CLIENT_EMAIL_PRIMARY}" || warn "Primary Gmail auth failed — run manually: gog-wrapper auth login -a ${CLIENT_EMAIL_PRIMARY}"
+
+read -rp "  Authenticate CoS email (${CLIENT_EMAIL_COS})? [y/n]: " AUTH_COS
+if [[ "$AUTH_COS" =~ ^[Yy] ]]; then
+  gog-wrapper auth login -a "${CLIENT_EMAIL_COS}" && success "CoS Gmail authenticated: ${CLIENT_EMAIL_COS}" || warn "CoS Gmail auth failed — run manually"
+fi
+
+# ── STEP 10 — CREATE AGENTS ─────────────────────────────────
+section "Step 10 — Create Agents"
+
+log "Creating cloud agents (Sonnet)..."
+openclaw agent create cos       --model anthropic/claude-sonnet-4-6  2>/dev/null || warn "cos already exists"
+openclaw agent create analyst   --model anthropic/claude-sonnet-4-6  2>/dev/null || warn "analyst already exists"
+openclaw agent create marketing --model anthropic/claude-sonnet-4-6  2>/dev/null || warn "marketing already exists"
+openclaw agent create legal     --model anthropic/claude-sonnet-4-6  2>/dev/null || warn "legal already exists"
+success "Cloud agents created"
+
+log "Creating local agents (Ollama — free)..."
+openclaw agent create pm         --model ollama/qwen2.5:7b 2>/dev/null || warn "pm already exists"
+openclaw agent create researcher --model ollama/qwen2.5:7b 2>/dev/null || warn "researcher already exists"
+success "Local agents created"
+
+# ── STEP 11 — ASSIGN WORKSPACES ─────────────────────────────
+section "Step 11 — Assign Agent Workspaces"
+
+log "Setting workspace paths (Python JSON method — required)..."
+
+python3 << PYEOF
+import json, os, sys
+
+path = os.path.expanduser('~/.openclaw/openclaw.json')
+username = "${USERNAME}"
+base = f"/Users/{username}/.openclaw"
+
+cp_path = path + '.bak.' + __import__('datetime').datetime.now().strftime('%Y%m%d%H%M')
+import shutil
+shutil.copy(path, cp_path)
+print(f"  Backup: {cp_path}")
+
+with open(path, 'r') as f:
+    c = json.load(f)
+
+workspace_map = {
+    'cos':        f'{base}/workspace-cos',
+    'analyst':    f'{base}/workspace-analyst',
+    'marketing':  f'{base}/workspace-marketing',
+    'pm':         f'{base}/workspace-pm',
+    'researcher': f'{base}/workspace-researcher',
+    'legal':      f'{base}/workspace-legal',
 }
 
-declare -A WORKSPACES
-WORKSPACES["workspace-cos"]="SOUL.md USER.md MEMORY.md DISPATCH_RULES.md"
-WORKSPACES["workspace-analyst"]="SOUL.md"
-WORKSPACES["workspace-researcher"]="SOUL.md"
-WORKSPACES["workspace-legal"]="SOUL.md"
-WORKSPACES["workspace-marketing"]="SOUL.md"
-WORKSPACES["workspace-pm"]="SOUL.md"
+for agent in c.get('agents', {}).get('list', []):
+    aid = agent.get('id')
+    if aid in workspace_map:
+        agent['workspace'] = workspace_map[aid]
+        print(f"  ✓ {aid:15} → {workspace_map[aid]}")
 
-for workspace in "${!WORKSPACES[@]}"; do
-  WS_DIR="$OPENCLAW_DIR/$workspace"
-  mkdir -p "$WS_DIR"
-  for file in ${WORKSPACES[$workspace]}; do
-    url="${TEMPLATE_BASE_URL}/${workspace}/${file}"
-    dest="$WS_DIR/$file"
-    if curl -fsSL "$url" -o "$dest" 2>/dev/null; then
-      substitute_tokens "$dest"
-      success "  ${workspace}/${file} — personalized"
+with open(path, 'w') as f:
+    json.dump(c, f, indent=2)
+
+print("\n  Verifying — any (none) is a problem:")
+with open(path, 'r') as f:
+    c = json.load(f)
+for agent in c.get('agents', {}).get('list', []):
+    ws = agent.get('workspace', '(none)')
+    flag = ' ← FIX THIS' if ws == '(none)' else ''
+    print(f"  {agent.get('id','?'):20} {agent.get('model','?'):40} {ws}{flag}")
+PYEOF
+
+success "Workspace paths assigned"
+
+# ── STEP 12 — POPULATE WORKSPACE FILES ──────────────────────
+section "Step 12 — Populate Workspace Files"
+
+log "Downloading workspace templates from GitHub..."
+
+BASE_URL="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+TEMPLATE_AGENTS=(cos analyst marketing pm researcher legal)
+
+TEMPLATE_OK=0
+for agent in "${TEMPLATE_AGENTS[@]}"; do
+  FILES=(SOUL.md)
+  [[ "$agent" == "cos" ]] && FILES=(SOUL.md CORE.md AGENTS.md DISPATCH_RULES.md MEMORY.md BOOT.md USER.md HEARTBEAT.md TOOLS.md)
+
+  for f in "${FILES[@]}"; do
+    url="${BASE_URL}/templates/workspace-${agent}/${f}"
+    dest="${OPENCLAW_DIR}/workspace-${agent}/${f}"
+    if curl -fsSL "$url" -o "${dest}.template" 2>/dev/null; then
+      # Inject client variables
+      sed \
+        -e "s/{{CLIENT_NAME}}/${CLIENT_NAME}/g" \
+        -e "s/{{CLIENT_COMPANY}}/${CLIENT_COMPANY}/g" \
+        -e "s/{{CLIENT_ROLE}}/${CLIENT_ROLE}/g" \
+        -e "s/{{AGENT_NAME}}/${AGENT_NAME}/g" \
+        -e "s/{{CLIENT_EMAIL_PRIMARY}}/${CLIENT_EMAIL_PRIMARY}/g" \
+        -e "s/{{CLIENT_EMAIL_COS}}/${CLIENT_EMAIL_COS}/g" \
+        -e "s/{{CLIENT_USERNAME}}/${USERNAME}/g" \
+        -e "s/{{CLIENT_TIMEZONE}}/${CLIENT_TIMEZONE}/g" \
+        "${dest}.template" > "$dest"
+      rm "${dest}.template"
+      ((TEMPLATE_OK++)) || true
     else
-      warn "  Template not found: ${workspace}/${file}"
+      warn "Could not download template: workspace-${agent}/${f}"
     fi
   done
 done
 
-# Assign workspaces via Python
-python3 << PYEOF
-import json, os
-path = os.path.expanduser('~/.openclaw/openclaw.json')
-ws_map = {
-    'cos': 'workspace-cos', 'analyst': 'workspace-analyst',
-    'researcher': 'workspace-researcher', 'legal': 'workspace-legal',
-    'marketing': 'workspace-marketing', 'pm': 'workspace-pm',
-}
-try:
-    with open(path) as f: config = json.load(f)
-    for agent in config.get('agents', {}).get('list', []):
-        aid = agent.get('id', '')
-        if aid in ws_map:
-            agent['workspace'] = os.path.expanduser('~/.openclaw/') + ws_map[aid]
-    with open(path, 'w') as f: json.dump(config, f, indent=2)
-    print('Workspaces assigned.')
-except Exception as e:
-    print(f'Workspace error: {e}')
-PYEOF
+# Remove any leftover BOOTSTRAP.md files
+find "${OPENCLAW_DIR}" -name 'BOOTSTRAP.md' -not -path '*/workspace-cos/*' -delete 2>/dev/null || true
 
-# Install cron jobs
-CRON_TMP=$(mktemp)
-crontab -l 2>/dev/null > "$CRON_TMP" || true
-add_cron() { grep -qF "$1" "$CRON_TMP" || echo "$1" >> "$CRON_TMP"; }
-add_cron "*/15 8-18 * * 1-5 python3 $SCRIPTS_DIR/email_triage.py"
-add_cron "0 3 * * * bash $SCRIPTS_DIR/reset_sessions.sh"
-add_cron "0 18 * * 1-5 python3 $SCRIPTS_DIR/cost_alert.py"
-add_cron "0 2 * * * bash $SCRIPTS_DIR/backup_local.sh"
-crontab "$CRON_TMP"; rm "$CRON_TMP"
-success "Cron jobs installed"
+success "Workspace files populated (${TEMPLATE_OK} files)"
 
-# OpenClaw scheduled briefs
-openclaw cron add --name "${AGENT_NAME}-morning" \
-  --schedule "${MORNING_M} ${MORNING_H} * * *" --agent cos --channel telegram \
-  --message "Check ${GMAIL_PRIMARY} for unread emails. Check today's calendar. Write a morning brief for ${CLIENT_NAME}: 1. Action Required emails. 2. Today's meetings. Under 10 lines." 2>/dev/null || warn "Morning cron — add manually"
+# ── STEP 13 — INSTALL SCRIPTS ───────────────────────────────
+section "Step 13 — Install Automation Scripts"
 
-openclaw cron add --name "${AGENT_NAME}-evening" \
-  --schedule "${EVENING_M} ${EVENING_H} * * *" --agent cos --channel telegram \
-  --message "End of day brief for ${CLIENT_NAME}: 1. Completed today. 2. Open items for tomorrow. 3. Anything urgent tonight. Under 10 lines." 2>/dev/null || warn "Evening cron — add manually"
+# Copy scripts from vela-setup (already downloaded by install.sh)
+SETUP_SCRIPTS="$HOME/vela-setup/scripts"
+TARGET_SCRIPTS="${OPENCLAW_DIR}/scripts"
 
-success "Scheduled briefs set (${MORNING_BRIEF} + ${EVENING_BRIEF})"
+for script in email_triage.py cost_alert.py reset_sessions.sh backup_gdrive.sh backup_local.sh deliver_report.py license_check.py; do
+  src="${SETUP_SCRIPTS}/${script}"
+  dst="${TARGET_SCRIPTS}/${script}"
+  if [[ -f "$src" ]]; then
+    cp "$src" "$dst"
+    chmod +x "$dst" 2>/dev/null || true
 
-cp "$OPENCLAW_DIR/openclaw.json" "$OPENCLAW_DIR/openclaw.json.bak.stable" 2>/dev/null || true
-success "Stable backup saved"
+    # Inject client-specific values
+    sed -i '' \
+      -e "s/{{CLIENT_EMAIL_PRIMARY}}/${CLIENT_EMAIL_PRIMARY}/g" \
+      -e "s/{{CLIENT_EMAIL_COS}}/${CLIENT_EMAIL_COS}/g" \
+      -e "s/{{TELEGRAM_CHAT_ID}}/${TELEGRAM_USER_ID}/g" \
+      -e "s/{{TELEGRAM_BOT_TOKEN}}/${TELEGRAM_BOT_TOKEN}/g" \
+      -e "s/{{GDRIVE_BACKUP_FOLDER_ID}}/${GDRIVE_BACKUP_FOLDER_ID}/g" \
+      -e "s/{{VELA_LICENSE_KEY}}/${VELA_LICENSE_KEY}/g" \
+      -e "s/{{CLIENT_NAME}}/${CLIENT_NAME}/g" \
+      "$dst" 2>/dev/null || true
 
-# ════════════════════════════════════════════════════════════
-#  STEP 9 — VELA WELCOME MESSAGE
-# ════════════════════════════════════════════════════════════
-header "9 / 9  SENDING WELCOME MESSAGE"
+    success "  ${script}"
+  else
+    warn "  ${script} not found in vela-setup — install may be incomplete"
+  fi
+done
+
+# ── STEP 14 — COST-OPTIMIZED CONFIG ─────────────────────────
+section "Step 14 — Cost Optimization Settings"
+
+log "Applying all cost optimization settings..."
+
+openclaw config set agents.defaults.models."anthropic/claude-sonnet-4-6".params.cacheRetention short
+openclaw config set agents.cos.contextPruning.mode "cache-ttl"
+openclaw config set agents.cos.contextPruning.ttl "5m"
+openclaw config set agents.cos.contextPruning.keepLastAssistants 2
+openclaw config set agents.cos.compaction.mode "safeguard"
+openclaw config set agents.defaults.timeoutSeconds 600
+openclaw config set tools.fs.workspaceOnly false
+
+success "cacheRetention: short (5-min TTL — saves ~37% on cache writes)"
+success "contextPruning: cache-ttl mode"
+success "compaction: safeguard mode"
+
+# ── STEP 15 — CRON JOBS ──────────────────────────────────────
+section "Step 15 — Cron Jobs"
+
+log "Adding OpenClaw cron jobs..."
+
+openclaw cron add \
+  --name hannah-morning \
+  --agent cos \
+  --cron "0 ${BRIEF_MORNING_HOUR} * * *" \
+  --tz "${CLIENT_TIMEZONE}" \
+  --session isolated \
+  --light-context \
+  --announce \
+  --channel telegram \
+  --message "Morning brief: check email, calendar, surface anything time-sensitive for ${CLIENT_NAME}." \
+  2>/dev/null && success "  hannah-morning (${BRIEF_MORNING_HOUR}:00 ${CLIENT_TIMEZONE})" || warn "  hannah-morning already exists"
+
+openclaw cron add \
+  --name hannah-evening \
+  --agent cos \
+  --cron "0 ${BRIEF_EVENING_HOUR} * * *" \
+  --tz "${CLIENT_TIMEZONE}" \
+  --session isolated \
+  --light-context \
+  --announce \
+  --channel telegram \
+  --message "Evening brief: summarize today, flag anything for tomorrow for ${CLIENT_NAME}." \
+  2>/dev/null && success "  hannah-evening (${BRIEF_EVENING_HOUR}:00 ${CLIENT_TIMEZONE})" || warn "  hannah-evening already exists"
+
+log "Adding system cron jobs..."
+
+CRONTAB_ENTRY_TRIAGE="*/15 8-18 * * 1-5 python3 ${SCRIPTS_DIR}/email_triage.py >> ${LOGS_DIR}/triage.log 2>&1"
+CRONTAB_ENTRY_RESET="0 3,14 * * * bash ${SCRIPTS_DIR}/reset_sessions.sh"
+CRONTAB_ENTRY_COST="0 18 * * 1-5 python3 ${SCRIPTS_DIR}/cost_alert.py"
+CRONTAB_ENTRY_BACKUP="0 2 * * * bash ${SCRIPTS_DIR}/backup_gdrive.sh >> ${LOGS_DIR}/gdrive-backup.log 2>&1"
+CRONTAB_ENTRY_LICENSE="0 9 * * * python3 ${SCRIPTS_DIR}/license_check.py >> ${LOGS_DIR}/license.log 2>&1"
+
+(crontab -l 2>/dev/null || true; echo "$CRONTAB_ENTRY_TRIAGE") | sort -u | crontab -
+(crontab -l 2>/dev/null; echo "$CRONTAB_ENTRY_RESET") | sort -u | crontab -
+(crontab -l 2>/dev/null; echo "$CRONTAB_ENTRY_COST") | sort -u | crontab -
+(crontab -l 2>/dev/null; echo "$CRONTAB_ENTRY_BACKUP") | sort -u | crontab -
+(crontab -l 2>/dev/null; echo "$CRONTAB_ENTRY_LICENSE") | sort -u | crontab -
+
+success "  email_triage — every 15 min, weekdays 8am–6pm"
+success "  reset_sessions — 3am + 2pm daily"
+success "  cost_alert — 6pm weekdays"
+success "  backup_gdrive — 2am daily"
+success "  license_check — 9am daily"
+
+# ── STEP 16 — CONFIG BACKUP ──────────────────────────────────
+section "Step 16 — Config Backup"
+
+cp "${OPENCLAW_DIR}/openclaw.json" "${OPENCLAW_DIR}/openclaw.json.bak.stable"
+success "Stable config backup saved: openclaw.json.bak.stable"
+
+# ── STEP 17 — LICENSE CHECK SCRIPT IN PLACE ─────────────────
+section "Step 17 — License Validation Active"
+
+log "Writing VELA client identity file..."
+cat > "${OPENCLAW_DIR}/vela_client.conf" << EOF
+VELA_CLIENT_NAME="${CLIENT_NAME}"
+VELA_CLIENT_COMPANY="${CLIENT_COMPANY}"
+VELA_CLIENT_ROLE="${CLIENT_ROLE}"
+VELA_CLIENT_EMAIL="${CLIENT_EMAIL_PRIMARY}"
+VELA_LICENSE_KEY="${VELA_LICENSE_KEY}"
+VELA_LICENSE_TIER="${LICENSE_TIER}"
+VELA_INSTALL_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+VELA_VERSION="${VELA_VERSION}"
+EOF
+chmod 600 "${OPENCLAW_DIR}/vela_client.conf"
+success "Client identity file written"
+
+# ── STEP 18 — START AND VERIFY ───────────────────────────────
+section "Step 18 — Start and Verify"
 
 log "Starting OpenClaw gateway..."
-openclaw gateway start 2>/dev/null || true
+openclaw gateway install 2>/dev/null || true
+openclaw gateway restart
+
 sleep 5
 
-WELCOME="Welcome to VELA, ${CLIENT_NAME}.
-
-I am ${AGENT_NAME}, your AI Chief of Staff — powered by VELA Executive Intelligence Systems.
-
-Here is what I do for you every day:
-- Morning brief at ${MORNING_BRIEF} — email, calendar, priorities
-- Evening brief at ${EVENING_BRIEF} — what is done, what is next
-- Email triage every 15 minutes during business hours
-- Real-time task routing to your specialist team
-
-Your specialist team:
-- Analyst — financial modeling and data analysis
-- Researcher — market intel and due diligence
-- Legal — contracts and compliance review
-- Marketing — copy, strategy, positioning
-- PM — projects, tasks, follow-ups
-
-How to reach me:
-Message me here in Telegram in plain language. No special commands needed. Just tell me what you need.
-
-Use /new to start a fresh session for each new topic. This keeps things fast and efficient.
-
-Your system is live. What is on your plate today?
-
-— ${AGENT_NAME} | VELA Executive Intelligence Systems"
-
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-  -H "Content-Type: application/json" \
-  -d "{\"chat_id\": \"${TELEGRAM_CHAT_ID}\", \"text\": $(python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))" <<< "$WELCOME")}" \
-  > /dev/null 2>&1 && success "Welcome message sent to ${CLIENT_NAME} via Telegram" || warn "Welcome message failed — check Telegram config"
-
-# ════════════════════════════════════════════════════════════
-#  DONE
-# ════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GOLD}"
-echo "  ╔══════════════════════════════════════════════╗"
-echo "  ║                                              ║"
-echo "  ║     VELA INSTALLATION COMPLETE               ║"
-echo "  ║                                              ║"
-echo "  ╚══════════════════════════════════════════════╝"
-echo -e "${RESET}"
+log "Running verification..."
 echo ""
-echo -e "  ${BOLD}${CLIENT_NAME}, your VELA system is live.${RESET}"
+
+openclaw status    && success "Gateway: online" || warn "Gateway: check status manually"
+openclaw agents    2>/dev/null | head -20
+openclaw cron list 2>/dev/null | head -10
+
 echo ""
-echo -e "  ${GOLD}Agent:${RESET}     ${AGENT_NAME} (Chief of Staff)"
-echo -e "  ${GOLD}Briefs:${RESET}    ${MORNING_BRIEF} morning  |  ${EVENING_BRIEF} evening"
-echo -e "  ${GOLD}Timezone:${RESET}  ${CLIENT_TIMEZONE}"
-echo ""
-echo -e "  ${CYAN}Three things to do right now:${RESET}"
-echo -e "  1. Check Telegram — ${AGENT_NAME} just sent you a welcome message"
-echo -e "  2. Connect Gmail: gog auth login -a ${GMAIL_PRIMARY}"
-echo -e "  3. Scan WhatsApp: openclaw gateway restart (then scan QR in WhatsApp)"
-echo ""
-echo -e "  ${GRAY}Optional but recommended:"
-echo -e "  Install monitoring: curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/install_uptime_kuma.sh | bash"
-echo -e "  Set up backup:     curl -fsSL https://raw.githubusercontent.com/greg442/vela_scripts/main/scripts/backup_gdrive.sh -o ~/backup_gdrive.sh && chmod +x ~/backup_gdrive.sh && ~/backup_gdrive.sh --setup${RESET}"
+log "Running workspace map..."
+python3 << 'PYEOF'
+import json, os
+path = os.path.expanduser('~/.openclaw/openclaw.json')
+with open(path) as f:
+    c = json.load(f)
+all_ok = True
+for a in c.get('agents', {}).get('list', []):
+    ws = a.get('workspace', '(none)')
+    flag = ' ← FIX THIS' if ws == '(none)' else ''
+    if flag: all_ok = False
+    print(f"  {a.get('id','?'):20} {a.get('model','?'):35} {ws}{flag}")
+if all_ok:
+    print("\n  All agents have workspace assignments ✓")
+PYEOF
+
+# ── DONE ─────────────────────────────────────────────────────
 echo ""
 hr
-echo -e "  ${GOLD}VELA Executive Intelligence Systems  |  Confidential${RESET}"
+echo -e "\n${GOLD}${BOLD}  VELA is installed.${RESET}\n"
+echo -e "  ${BOLD}${CLIENT_NAME}${RESET} — your ${AGENT_NAME} is ready.\n"
+echo -e "  ${GRAY}Three things to do now:${RESET}"
+echo -e "  ${GOLD}1.${RESET} Open Telegram and message your bot to pair it"
+echo -e "  ${GOLD}2.${RESET} Scan WhatsApp QR: Settings → Linked Devices → Link a Device"
+echo -e "  ${GOLD}3.${RESET} Type ${BOLD}/new${RESET} and say hello to ${AGENT_NAME}"
+echo ""
+echo -e "  ${GRAY}Support: greg@gregshindler.com | Telegram: @Vela_Greg${RESET}"
 hr
 echo ""

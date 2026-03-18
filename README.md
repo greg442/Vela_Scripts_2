@@ -18,7 +18,7 @@ You will need your **VELA License Key** — provided by your installer before th
 
 ## Before You Run This
 
-Read the **README First** guide your installer sent you. It lists every credential you need to collect before running the installer. The install takes 45–90 minutes on first run — most of that is downloading AI models.
+Read the **START HERE** guide your installer sent you. It lists every credential you need to collect before running the installer. The install takes 45–90 minutes on first run — most of that is downloading AI models.
 
 Have these ready:
 

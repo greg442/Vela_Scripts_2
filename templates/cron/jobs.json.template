@@ -53,7 +53,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use /opt/homebrew/bin/gog-wrapper to check greg@gregshindler.com for unread emails since noon. Check tomorrow's calendar.\n\nNOISE (skip entirely): newsletters, marketing, automated notifications, receipts, social, noreply.\n\nIMPORTANT: Your text response is automatically delivered to Greg via Telegram. No send tool needed. Just write your response.\n\nWrite one short paragraph: any Action Required items since noon, plus tomorrow's first meeting. If nothing actionable, write \"Inbox clear.\" and note tomorrow's first meeting. Under 5 lines.",
+        "message": "Use /opt/homebrew/bin/gog-wrapper to check greg@gregshindler.com for unread emails since noon. Check tomorrow's calendar.\n\nNOISE (skip entirely): newsletters, marketing, automated notifications, receipts, social, noreply.\n\nIMPORTANT: Your text response is automatically delivered to Greg via Telegram. No send tool needed. Just write your response.\n\nWrite one short paragraph: any Action Required items since noon, plus tomorrow's first meeting. If nothing actionable, write \"Inbox clear.\" and note tomorrow's first meeting. Under 5 lines.\n\nIf uncertain whether an email warrants a response:\n- Do NOT guess or draft blindly\n- Send Greg one Telegram line: 'Uncertain on this one \u2014 [sender]: [subject]. Worth responding?'\n- Wait for his call before drafting anything.",
         "timeoutSeconds": 480,
         "lightContext": true
       },
@@ -88,7 +88,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Early triage only. Use /opt/homebrew/bin/gog-wrapper gmail search 'is:unread' -a greg@gregshindler.com to check for unread emails since yesterday 5pm.\n\nFlag ONLY: investor or partner emails, calendar requests, anything with a deadline today.\n\nIf nothing urgent: do nothing. No message needed.\nIf something urgent: send Greg a Telegram DM with one line per item.",
+        "message": "Early triage only. Use /opt/homebrew/bin/gog-wrapper gmail search 'is:unread' -a greg@gregshindler.com to check for unread emails since yesterday 5pm.\n\nFlag ONLY: investor or partner emails, calendar requests, anything with a deadline today.\n\nIf nothing urgent: do nothing. No message needed.\nIf something urgent: send Greg a Telegram DM with one line per item.\n\nIf uncertain whether an email warrants a response:\n- Do NOT guess or draft blindly\n- Send Greg one Telegram line: 'Uncertain on this one \u2014 [sender]: [subject]. Worth responding?'\n- Wait for his call before drafting anything.",
         "timeoutSeconds": 300,
         "lightContext": true
       },
@@ -138,7 +138,7 @@
         "lastRunStatus": "error",
         "lastStatus": "error",
         "lastDurationMs": 94981,
-        "lastError": "⚠️ ✉️ Message failed",
+        "lastError": "\u26a0\ufe0f \u2709\ufe0f Message failed",
         "lastDelivered": true,
         "lastDeliveryStatus": "delivered",
         "consecutiveErrors": 1
@@ -218,7 +218,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Sunday commitment review. Read COMMITMENT_TRACKER.md.\n\nSurface:\n- Any commitment due this week\n- Any commitment overdue\n- Any commitment with no progress in 7+ days\n\nIf items found: send Greg a Telegram DM.\nFormat: [Due DATE] Commitment — Status\nIf nothing due or overdue: send one line — 'No open commitments due this week.'",
+        "message": "Sunday commitment review. Read COMMITMENT_TRACKER.md.\n\nSurface:\n- Any commitment due this week\n- Any commitment overdue\n- Any commitment with no progress in 7+ days\n\nIf items found: send Greg a Telegram DM.\nFormat: [Due DATE] Commitment \u2014 Status\nIf nothing due or overdue: send one line \u2014 'No open commitments due this week.'",
         "timeoutSeconds": 300,
         "lightContext": true
       },
@@ -270,13 +270,13 @@
         "kind": "cron",
         "expr": "0 8 * * 1-5",
         "tz": "America/New_York",
-        "message": "Daily deal velocity check. Query intelligence:\n~/.openclaw/tools/intelligence.sh query deal --filter \"status=active\"\n\nFlag any deal where last_updated is more than 10 days ago.\n\nFor each stalled deal send one RISK signal via Telegram DM:\nRISK [forward-looking]\nRisk: Deal stalling — [deal name]\nEvidence: No movement since [last_updated date]\nPotential impact: [what happens if this stays stalled]\nSuggested move: [specific next action]\n\nAlso log to intelligence.sh:\n~/.openclaw/tools/intelligence.sh create event --props 'source=cron' 'signal_type=risk' 'ium_score=7' 'entity_id=[deal-id]' 'summary=Deal stalling: [name]' 'action_taken=Risk signal sent to Greg'\n\nIf no deals stalled: do nothing."
+        "message": "Daily deal velocity check. Query intelligence:\n~/.openclaw/tools/intelligence.sh query deal --filter \"status=active\"\n\nFlag any deal where last_updated is more than 10 days ago.\n\nFor each stalled deal send one RISK signal via Telegram DM:\nRISK [forward-looking]\nRisk: Deal stalling \u2014 [deal name]\nEvidence: No movement since [last_updated date]\nPotential impact: [what happens if this stays stalled]\nSuggested move: [specific next action]\n\nAlso log to intelligence.sh:\n~/.openclaw/tools/intelligence.sh create event --props 'source=cron' 'signal_type=risk' 'ium_score=7' 'entity_id=[deal-id]' 'summary=Deal stalling: [name]' 'action_taken=Risk signal sent to Greg'\n\nIf no deals stalled: do nothing."
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Daily deal velocity check. Query Notion:\n~/.openclaw/tools/notion.sh query deal --sort 'Last Movement:desc' --limit 10\n\nFlag any deal where Last Movement is more than 10 days ago and Status is Active.\n\nFor each stalled deal send one RISK signal via Telegram DM.\nFormat per SIGNAL_ENGINE.md:\nRISK [forward-looking]\nRisk: Deal stalling — [deal name]\nEvidence: No movement since [date]\nPotential impact: [what happens if this stays stalled]\nSuggested move: [specific next action]\n\nIf no deals stalled: do nothing.",
+        "message": "Daily deal velocity check. Query Notion:\n~/.openclaw/tools/notion.sh query deal --sort 'Last Movement:desc' --limit 10\n\nFlag any deal where Last Movement is more than 10 days ago and Status is Active.\n\nFor each stalled deal send one RISK signal via Telegram DM.\nFormat per SIGNAL_ENGINE.md:\nRISK [forward-looking]\nRisk: Deal stalling \u2014 [deal name]\nEvidence: No movement since [date]\nPotential impact: [what happens if this stays stalled]\nSuggested move: [specific next action]\n\nIf no deals stalled: do nothing.",
         "timeoutSeconds": 300,
         "lightContext": true
       },
@@ -346,7 +346,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Active heartbeat. Full situational awareness check per HEARTBEAT.md.\n\nCheck:\n1. /opt/homebrew/bin/gog-wrapper gmail search 'is:unread' -a greg@gregshindler.com — last 10 unread\n2. /opt/homebrew/bin/gog-wrapper calendar list -a greg@gregshindler.com --days 1 — next 24 hours\n3. COMMITMENT_TRACKER.md — anything due within 72 hours?\n\nApply IUM scoring per SIGNAL_ENGINE.md.\nSurface only if Impact High OR (Urgency High AND Momentum stalling).\nOne Telegram DM per qualifying signal.\nDefault: do nothing.",
+        "message": "Active heartbeat. Full situational awareness check per HEARTBEAT.md.\n\nCheck:\n1. /opt/homebrew/bin/gog-wrapper gmail search 'is:unread' -a greg@gregshindler.com \u2014 last 10 unread\n2. /opt/homebrew/bin/gog-wrapper calendar list -a greg@gregshindler.com --days 1 \u2014 next 24 hours\n3. COMMITMENT_TRACKER.md \u2014 anything due within 72 hours?\n\nApply IUM scoring per SIGNAL_ENGINE.md.\nSurface only if Impact High OR (Urgency High AND Momentum stalling).\nOne Telegram DM per qualifying signal.\nDefault: do nothing.",
         "timeoutSeconds": 480,
         "lightContext": true
       },
@@ -413,7 +413,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "9AM email check. Scan for anything that arrived since 5AM triage.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread → draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change → flag immediately\n- Deadline or time-sensitive item → flag immediately\n- Noise (newsletters, marketing, receipts) → ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed."
+        "message": "9AM email check. Scan for anything that arrived since 5AM triage.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread \u2192 draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change \u2192 flag immediately\n- Deadline or time-sensitive item \u2192 flag immediately\n- Noise (newsletters, marketing, receipts) \u2192 ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed.\n\nIf uncertain whether an email warrants a response:\n- Do NOT guess or draft blindly\n- Send Greg one Telegram line: 'Uncertain on this one \u2014 [sender]: [subject]. Worth responding?'\n- Wait for his call before drafting anything."
       },
       "state": {
         "nextRunAtMs": 1773925200000
@@ -436,7 +436,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Noon email check. Scan for anything that arrived since 9AM.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread → draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change → flag immediately\n- Deadline or time-sensitive item → flag immediately\n- Noise (newsletters, marketing, receipts) → ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed."
+        "message": "Noon email check. Scan for anything that arrived since 9AM.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread \u2192 draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change \u2192 flag immediately\n- Deadline or time-sensitive item \u2192 flag immediately\n- Noise (newsletters, marketing, receipts) \u2192 ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed.\n\nIf uncertain whether an email warrants a response:\n- Do NOT guess or draft blindly\n- Send Greg one Telegram line: 'Uncertain on this one \u2014 [sender]: [subject]. Worth responding?'\n- Wait for his call before drafting anything."
       },
       "state": {
         "nextRunAtMs": 1773936000000
@@ -459,7 +459,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "3PM email check. Scan for anything that arrived since noon.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread → draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change → flag immediately\n- Deadline or time-sensitive item → flag immediately\n- Noise (newsletters, marketing, receipts) → ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed."
+        "message": "3PM email check. Scan for anything that arrived since noon.\n\n/opt/homebrew/bin/gog-wrapper gmail search \"is:unread\" -a greg@gregshindler.com\n\nPriority contacts to watch: Paul Soanes, Tom Noons, Bradley Smith, Ricardo Rossello, Greg Walker, Casey Federman, Ron Hatfield, Fortem Capital, Westwood Group, Costa Palmas team.\n\nRules:\n- Known contact replied to an open thread \u2192 draft a response immediately, surface to Greg via Telegram with draft\n- Calendar request or meeting change \u2192 flag immediately\n- Deadline or time-sensitive item \u2192 flag immediately\n- Noise (newsletters, marketing, receipts) \u2192 ignore\n\nFor each actionable item:\n1. Draft the response\n2. Send Greg a Telegram DM with the draft and ask for approval\n3. Log a signal: ~/.openclaw/tools/intelligence.sh create event --props 'source=email' 'signal_type=opportunity' 'ium_score=7' 'summary=[what arrived]' 'action_taken=Draft prepared, sent to Greg for approval'\n\nIf nothing actionable: do nothing. No message needed.\n\nIf uncertain whether an email warrants a response:\n- Do NOT guess or draft blindly\n- Send Greg one Telegram line: 'Uncertain on this one \u2014 [sender]: [subject]. Worth responding?'\n- Wait for his call before drafting anything."
       },
       "state": {
         "nextRunAtMs": 1773946800000

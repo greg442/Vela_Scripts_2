@@ -2,18 +2,13 @@
 # ============================================================
 #  VELA Private Command Infrastructure
 #  Master Installer — install.sh
-#  Version 2.0 — March 2026
+#  Version 2.1 — March 2026
 #
-#  ONE-LINE INSTALL (paste into Terminal on your Mac Mini):
-#
+#  STANDARD INSTALL (client pastes into Terminal):
 #  curl -fsSL https://raw.githubusercontent.com/greg442/Vela_Scripts_2/main/install.sh | bash
 #
-#  What happens:
-#    1. Preflight — checks hardware, OS, internet
-#    2. Downloads all VELA scripts from GitHub
-#    3. Validates your VELA license key
-#    4. Runs the full install sequence
-#    5. Leaves a clean ~/vela-setup/ directory with all scripts
+#  PRE-FILLED INSTALL (Handler-generated, skips all prompts):
+#  bash ~/Downloads/launch.sh
 #
 #  Greg Shindler / VELA Private Command Infrastructure
 #  PROPRIETARY & CONFIDENTIAL
@@ -24,7 +19,7 @@ set -euo pipefail
 GITHUB_USER="greg442"
 GITHUB_REPO="Vela_Scripts_2"
 GITHUB_BRANCH="main"
-VELA_VERSION="2.0.0"
+VELA_VERSION="2.1.0"
 
 BASE_URL="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
 INSTALL_DIR="$HOME/vela-setup"
@@ -45,6 +40,36 @@ error()   { echo -e "${RED}✗${RESET} $1"; exit 1; }
 hr()      { echo -e "${GRAY}────────────────────────────────────────────────────${RESET}"; }
 section() { echo -e "\n${BLUE}${BOLD}$1${RESET}"; hr; }
 
+# ── PROMPT HELPER ────────────────────────────────────────────
+# ask VAR_NAME "Prompt" "optional_default"
+# If VAR_NAME already set: shows value (masked if secret) and skips.
+# If not set: prompts interactively.
+SECRETS_PATTERN="API_KEY|TOKEN|SECRET|PASSWORD"
+
+ask() {
+  local var_name="$1"
+  local prompt="$2"
+  local default="${3:-}"
+  local current_val="${!var_name:-}"
+
+  if [[ -n "$current_val" ]]; then
+    if echo "$var_name" | grep -qE "$SECRETS_PATTERN"; then
+      echo -e "  ${GREEN}✓${RESET}  ${prompt}: ${current_val:0:8}... ${GRAY}(pre-filled)${RESET}"
+    else
+      echo -e "  ${GREEN}✓${RESET}  ${prompt}: ${current_val} ${GRAY}(pre-filled)${RESET}"
+    fi
+    return 0
+  fi
+
+  if [[ -n "$default" ]]; then
+    read -rp "  ${prompt} (default: ${default}): " _input
+    printf -v "$var_name" '%s' "${_input:-$default}"
+  else
+    read -rp "  ${prompt}: " _input
+    printf -v "$var_name" '%s' "$_input"
+  fi
+}
+
 # ── BANNER ──────────────────────────────────────────────────
 clear
 echo -e "${GOLD}"
@@ -59,6 +84,11 @@ BANNER
 echo -e "${RESET}"
 echo -e "  ${BOLD}VELA Installer v${VELA_VERSION}${RESET}"
 echo -e "  ${GRAY}Your judgment. Our infrastructure.${RESET}"
+
+if [[ "${VELA_PREFILLED:-false}" == "true" ]]; then
+  echo -e "  ${GREEN}${BOLD}Pre-filled install — credentials loaded. Prompts skipped.${RESET}"
+fi
+
 hr
 echo ""
 
@@ -78,28 +108,26 @@ success "${RAM_GB} GB unified memory"
 curl -s --max-time 8 "https://github.com" > /dev/null 2>&1 || error "No internet connection."
 success "Internet confirmed"
 
-# Energy Saver check
 SLEEP_SETTING=$(pmset -g | grep "sleep " | awk '{print $2}' || echo "unknown")
 if [[ "$SLEEP_SETTING" != "0" ]]; then
-  warn "Sleep is enabled (setting: ${SLEEP_SETTING}). VELA requires the Mac Mini to stay awake."
-  warn "Fix now: System Settings → Energy → set 'Prevent automatic sleep' to ON"
+  warn "Sleep is enabled. VELA requires the Mac Mini to stay awake."
+  warn "Fix: System Settings → Energy → Prevent automatic sleep → ON"
   echo ""
-  read -rp "  Press Enter once you've disabled sleep, or Ctrl+C to exit and fix first: "
+  read -rp "  Press Enter once sleep is disabled, or Ctrl+C to fix first: "
 fi
-
 echo ""
 
 # ── LICENSE KEY VALIDATION ───────────────────────────────────
 section "2 of 5 — License Validation"
 
-echo -e "  ${GRAY}Your VELA license key was provided by your installer.${RESET}"
-echo -e "  ${GRAY}It looks like: VELA-XXXX-XXXX-XXXX-XXXX${RESET}"
-echo ""
-read -rp "  Enter your VELA License Key: " VELA_LICENSE_KEY
-
-if [[ -z "$VELA_LICENSE_KEY" ]]; then
-  error "License key required. Contact greg@gregshindler.com."
+if [[ -z "${VELA_LICENSE_KEY:-}" ]]; then
+  echo -e "  ${GRAY}Your VELA license key was provided by your Handler.${RESET}"
+  echo -e "  ${GRAY}Format: VELA-XXXX-XXXX-XXXX-XXXX${RESET}"
+  echo ""
+  ask VELA_LICENSE_KEY "Your VELA License Key"
 fi
+
+[[ -n "${VELA_LICENSE_KEY:-}" ]] || error "License key required. Contact greg@gregshindler.com."
 
 log "Validating license key..."
 
@@ -110,85 +138,85 @@ LICENSE_RESPONSE=$(curl -s --max-time 15 \
 
 if [[ "$LICENSE_RESPONSE" == "TIMEOUT" ]]; then
   warn "License server unreachable. Proceeding with 24-hour grace period."
-  warn "Hannah will check again at next session start."
   LICENSE_STATUS="grace"
   LICENSE_TIER="command"
 else
-  LICENSE_STATUS=$(echo "$LICENSE_RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','invalid'))" 2>/dev/null || echo "invalid")
-  LICENSE_TIER=$(echo "$LICENSE_RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tier','command'))" 2>/dev/null || echo "command")
+  LICENSE_STATUS=$(echo "$LICENSE_RESPONSE" | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(d.get('status','invalid'))" 2>/dev/null || echo "invalid")
+  LICENSE_TIER=$(echo "$LICENSE_RESPONSE" | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(d.get('tier','command'))" 2>/dev/null || echo "command")
 fi
 
 case "$LICENSE_STATUS" in
-  active|grace)
-    success "License valid — Tier: ${LICENSE_TIER}"
-    ;;
-  revoked)
-    error "License revoked. Contact greg@gregshindler.com."
-    ;;
-  expired)
-    error "License expired. Contact greg@gregshindler.com to renew."
-    ;;
-  *)
-    error "Invalid license key. Check the key and try again, or contact greg@gregshindler.com."
-    ;;
+  active|grace) success "License valid — Tier: ${LICENSE_TIER}" ;;
+  revoked)      error "License revoked. Contact greg@gregshindler.com." ;;
+  expired)      error "License expired. Contact greg@gregshindler.com to renew." ;;
+  *)            error "Invalid license key. Contact greg@gregshindler.com." ;;
 esac
-
 echo ""
 
 # ── COLLECT CLIENT INFO ──────────────────────────────────────
 section "3 of 5 — Your Information"
 
-echo -e "  ${GRAY}This personalizes Hannah for you. Take your time.${RESET}"
+if [[ "${VELA_PREFILLED:-false}" == "true" ]]; then
+  echo -e "  ${GRAY}Credentials loaded from your setup form. Confirming...${RESET}"
+else
+  echo -e "  ${GRAY}This personalizes Hannah for you. Take your time.${RESET}"
+fi
 echo ""
 
-read -rp "  Your full name (e.g. John Smith): " CLIENT_NAME
-[[ -n "$CLIENT_NAME" ]] || error "Name required."
+ask CLIENT_NAME          "Your full name (e.g. John Smith)"
+[[ -n "${CLIENT_NAME:-}" ]] || error "Name required."
 
-read -rp "  Your company / organization: " CLIENT_COMPANY
-[[ -n "$CLIENT_COMPANY" ]] || error "Company required."
+ask CLIENT_COMPANY       "Your company"
+[[ -n "${CLIENT_COMPANY:-}" ]] || error "Company required."
 
-read -rp "  Your role / title: " CLIENT_ROLE
-[[ -n "$CLIENT_ROLE" ]] || error "Role required."
+ask CLIENT_ROLE          "Your role / title"
+[[ -n "${CLIENT_ROLE:-}" ]] || error "Role required."
 
-read -rp "  What would you like your agent called? (default: Hannah): " AGENT_NAME
+ask AGENT_NAME           "Agent name" "Hannah"
 AGENT_NAME="${AGENT_NAME:-Hannah}"
 
-read -rp "  Your primary Gmail address: " CLIENT_EMAIL_PRIMARY
-[[ "$CLIENT_EMAIL_PRIMARY" =~ @ ]] || error "Valid email required."
+ask CLIENT_EMAIL_PRIMARY "Primary Gmail address"
+[[ "${CLIENT_EMAIL_PRIMARY:-}" =~ @ ]] || error "Valid email required."
 
-read -rp "  Your CoS Gmail address (for outbound): " CLIENT_EMAIL_COS
-[[ "$CLIENT_EMAIL_COS" =~ @ ]] || error "Valid email required."
+ask CLIENT_EMAIL_COS     "CoS Gmail address (for outbound)"
+[[ "${CLIENT_EMAIL_COS:-}" =~ @ ]] || error "Valid email required."
 
-read -rp "  Your Mac Mini username (no spaces, e.g. johnsmith): " CLIENT_USERNAME
-[[ -n "$CLIENT_USERNAME" ]] || error "Username required."
+ask CLIENT_USERNAME      "Mac Mini username (no spaces)"
+[[ -n "${CLIENT_USERNAME:-}" ]] || error "Username required."
 
-read -rp "  Your timezone (e.g. America/New_York): " CLIENT_TIMEZONE
+ask CLIENT_TIMEZONE      "Timezone" "America/New_York"
 CLIENT_TIMEZONE="${CLIENT_TIMEZONE:-America/New_York}"
 
-read -rp "  Morning brief time — hour in 24h format (e.g. 6 for 6am): " BRIEF_MORNING_HOUR
+ask BRIEF_MORNING_HOUR   "Morning brief hour (24h, e.g. 6)" "6"
 BRIEF_MORNING_HOUR="${BRIEF_MORNING_HOUR:-6}"
 
-read -rp "  Evening brief time — hour in 24h format (e.g. 16 for 4pm): " BRIEF_EVENING_HOUR
+ask BRIEF_EVENING_HOUR   "Evening brief hour (24h, e.g. 16)" "16"
 BRIEF_EVENING_HOUR="${BRIEF_EVENING_HOUR:-16}"
 
 echo ""
-log "Collecting Telegram credentials..."
-echo -e "  ${GRAY}Need help? See README_First.pdf for step-by-step instructions.${RESET}"
-echo ""
 
-read -rp "  Telegram Bot Token: " TELEGRAM_BOT_TOKEN
-[[ -n "$TELEGRAM_BOT_TOKEN" ]] || error "Telegram bot token required."
+if [[ "${VELA_PREFILLED:-false}" != "true" ]]; then
+  log "Collecting credentials..."
+  echo -e "  ${GRAY}See the setup guides in your Google Drive folder if you need help.${RESET}"
+  echo ""
+fi
 
-read -rp "  Telegram User ID (from @userinfobot): " TELEGRAM_USER_ID
-[[ -n "$TELEGRAM_USER_ID" ]] || error "Telegram user ID required."
+ask TELEGRAM_BOT_TOKEN   "Telegram Bot Token"
+[[ -n "${TELEGRAM_BOT_TOKEN:-}" ]] || error "Bot token required."
 
-read -rp "  Telegram Group ID (negative integer, e.g. -1003750313044): " TELEGRAM_GROUP_ID
-[[ -n "$TELEGRAM_GROUP_ID" ]] || error "Telegram group ID required."
+ask TELEGRAM_USER_ID     "Telegram User ID (positive number)"
+[[ -n "${TELEGRAM_USER_ID:-}" ]] || error "User ID required."
 
-read -rp "  Anthropic API key (sk-ant-...): " ANTHROPIC_API_KEY
-[[ "$ANTHROPIC_API_KEY" =~ ^sk-ant- ]] || error "Invalid Anthropic API key format."
+ask TELEGRAM_GROUP_ID    "Telegram Group ID (negative number, e.g. -1003750313044)"
+[[ -n "${TELEGRAM_GROUP_ID:-}" ]] || error "Group ID required."
+[[ "${TELEGRAM_GROUP_ID:-}" =~ ^- ]] || error "Group ID must start with minus sign. Got: ${TELEGRAM_GROUP_ID}. Re-run @userinfobot inside your VELA Command group."
 
-read -rp "  Google Drive backup folder ID: " GDRIVE_BACKUP_FOLDER_ID
+ask ANTHROPIC_API_KEY    "Anthropic API key (sk-ant-...)"
+[[ "${ANTHROPIC_API_KEY:-}" =~ ^sk-ant- ]] || error "Invalid API key. Must start with sk-ant-"
+
+ask GDRIVE_BACKUP_FOLDER_ID "Google Drive backup folder ID"
 
 echo ""
 echo -e "  ${BOLD}Confirm your details:${RESET}"
@@ -200,9 +228,15 @@ echo -e "  ${GRAY}Email:     ${RESET}${CLIENT_EMAIL_PRIMARY}"
 echo -e "  ${GRAY}Timezone:  ${RESET}${CLIENT_TIMEZONE}"
 echo -e "  ${GRAY}Briefs:    ${RESET}${BRIEF_MORNING_HOUR}am / ${BRIEF_EVENING_HOUR}pm"
 echo ""
-read -rp "  Continue? (y/n): " CONFIRM
-[[ "$CONFIRM" =~ ^[Yy] ]] || error "Cancelled."
 
+if [[ "${VELA_PREFILLED:-false}" == "true" ]]; then
+  success "Values pre-verified by your Handler. Proceeding."
+  CONFIRM="y"
+else
+  read -rp "  Continue? (y/n): " CONFIRM
+fi
+
+[[ "$CONFIRM" =~ ^[Yy] ]] || error "Cancelled."
 echo ""
 
 # ── DOWNLOAD SCRIPTS ─────────────────────────────────────────
@@ -255,13 +289,13 @@ section "5 of 5 — Installing VELA"
 MAIN_SCRIPT="${INSTALL_DIR}/scripts/vela_install.sh"
 [[ -f "$MAIN_SCRIPT" ]] || error "Main install script not found. Check repo and retry."
 
-# Export all collected variables for the main installer
 export VELA_LICENSE_KEY CLIENT_NAME CLIENT_COMPANY CLIENT_ROLE AGENT_NAME
 export CLIENT_EMAIL_PRIMARY CLIENT_EMAIL_COS CLIENT_USERNAME CLIENT_TIMEZONE
 export BRIEF_MORNING_HOUR BRIEF_EVENING_HOUR
 export TELEGRAM_BOT_TOKEN TELEGRAM_USER_ID TELEGRAM_GROUP_ID
 export ANTHROPIC_API_KEY GDRIVE_BACKUP_FOLDER_ID
 export LICENSE_TIER VELA_VERSION GITHUB_USER GITHUB_REPO GITHUB_BRANCH
+export VELA_PREFILLED
 
 echo ""
 exec bash "${MAIN_SCRIPT}"

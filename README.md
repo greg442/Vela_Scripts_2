@@ -18,7 +18,7 @@ You will need your **VELA License Key** — provided by your installer before th
 
 ## Before You Run This
 
-Read the **START HERE** guide your installer sent you. IF YOU DID NOT RECEIVE IT, THERE IS A COPY IN THE USER MANUALS FOLDER HERE AT GIT HUB. It lists every credential you need to collect before running the installer. The install takes 45–90 minutes on first run — most of that is downloading AI models.
+Read the **START HERE** guide your installer sent you. If you did not receive it, contact your installer directly — all setup guides are included in your pre-installation package. It lists every credential you need to collect before running the installer. The install takes 45–90 minutes on first run — most of that is downloading AI models.
 
 Have these ready:
 

@@ -674,6 +674,146 @@ echo -e "\033[0;32m✓\033[0m Hannah is installed and seeded. Ready for first se
 echo ""
 LAUNCH_SEED
 
+cat >> "${LAUNCH_SCRIPT}" << 'LAUNCH_GATEWAY'
+# ── PHASE 3: Gateway provisioning ──
+echo ""
+echo -e "\033[0;34m\033[1m━━━ Provisioning Hannah Gateway ━━━\033[0m"
+echo ""
+
+GATEWAY_NAME=$(echo "$CLIENT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_-')
+SERVICE_NAME="ai.openclaw.gateway.${GATEWAY_NAME}"
+PLIST_FILE="$HOME/Library/LaunchAgents/${SERVICE_NAME}.plist"
+REGISTRY_FILE="$HOME/.openclaw/vela-port-registry.json"
+OPENCLAW_BIN="/opt/homebrew/lib/node_modules/openclaw/dist/index.js"
+NODE_BIN="/opt/homebrew/opt/node/bin/node"
+LOG_DIR="/tmp/openclaw"
+UID_NUM=$(id -u)
+
+if [[ ! -f "$OPENCLAW_BIN" ]]; then
+  echo -e "\033[0;33m⚠\033[0m  OpenClaw not found at $OPENCLAW_BIN. Gateway not provisioned."
+  echo "  Handler will provision the gateway manually via SSH."
+  exit 0
+fi
+
+mkdir -p "$HOME/Library/LaunchAgents"
+mkdir -p "$LOG_DIR"
+mkdir -p "$(dirname "$REGISTRY_FILE")"
+
+if [[ ! -f "$REGISTRY_FILE" ]]; then
+  echo '{"instances":[],"_meta":{"created":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","version":"1.0"}}' > "$REGISTRY_FILE"
+fi
+
+GATEWAY_PORT=$(python3 -c "
+import json
+try:
+    with open('$REGISTRY_FILE') as f:
+        reg = json.load(f)
+    ports = [inst['port'] for inst in reg.get('instances', [])]
+    print(max(ports) + 1 if ports else 18789)
+except:
+    print(18789)
+" 2>/dev/null || echo 18789)
+
+echo -e "  \033[0;36m▸\033[0m Gateway name: $GATEWAY_NAME"
+echo -e "  \033[0;36m▸\033[0m Port: $GATEWAY_PORT"
+
+cat > "$PLIST_FILE" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${SERVICE_NAME}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${NODE_BIN}</string>
+        <string>${OPENCLAW_BIN}</string>
+        <string>gateway</string>
+        <string>--port</string>
+        <string>${GATEWAY_PORT}</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>OPENCLAW_GATEWAY_PORT</key>
+        <string>${GATEWAY_PORT}</string>
+        <key>OPENCLAW_CONFIG</key>
+        <string>${HOME}/.openclaw/openclaw.json</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>${LOG_DIR}/${GATEWAY_NAME}-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>${LOG_DIR}/${GATEWAY_NAME}-stderr.log</string>
+    <key>WorkingDirectory</key>
+    <string>${HOME}</string>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>4096</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+</dict>
+</plist>
+PLIST
+
+echo -e "  \033[0;32m✓\033[0m Plist generated"
+
+python3 -c "
+import json
+from datetime import datetime, timezone
+with open('$REGISTRY_FILE') as f:
+    reg = json.load(f)
+reg['instances'] = [i for i in reg.get('instances', []) if i['name'] != '$GATEWAY_NAME']
+reg['instances'].append({
+    'name': '$GATEWAY_NAME',
+    'port': $GATEWAY_PORT,
+    'config': '$HOME/.openclaw/openclaw.json',
+    'service': '$SERVICE_NAME',
+    'plist': '$PLIST_FILE',
+    'installed_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+})
+reg['instances'].sort(key=lambda x: x['port'])
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(reg, f, indent=2)
+" 2>/dev/null && echo -e "  \033[0;32m✓\033[0m Registered in port registry" || echo -e "  \033[0;33m⚠\033[0m  Registry update failed"
+
+launchctl bootout "gui/${UID_NUM}/${SERVICE_NAME}" 2>/dev/null || true
+sleep 1
+launchctl bootstrap "gui/${UID_NUM}" "$PLIST_FILE" 2>/dev/null
+echo -e "  \033[0;36m▸\033[0m Starting gateway..."
+
+ATTEMPTS=0
+MAX_ATTEMPTS=15
+while [[ $ATTEMPTS -lt $MAX_ATTEMPTS ]]; do
+  if lsof -i :"$GATEWAY_PORT" -sTCP:LISTEN &>/dev/null 2>&1; then
+    GW_PID=$(lsof -ti :"$GATEWAY_PORT" -sTCP:LISTEN 2>/dev/null || echo "unknown")
+    echo -e "  \033[0;32m✓\033[0m Gateway running on port $GATEWAY_PORT (PID $GW_PID)"
+    echo ""
+    echo -e "\033[0;32m✓\033[0m Hannah is installed, seeded, and running. Ready for first session."
+    echo ""
+    exit 0
+  fi
+  sleep 1
+  ATTEMPTS=$((ATTEMPTS + 1))
+done
+
+echo -e "  \033[0;33m⚠\033[0m  Gateway did not start within ${MAX_ATTEMPTS}s."
+echo "  Check logs: tail -50 ${LOG_DIR}/${GATEWAY_NAME}-stderr.log"
+echo "  Handler will verify and restart via SSH."
+echo ""
+LAUNCH_GATEWAY
+
 chmod +x "${LAUNCH_SCRIPT}"
 success "Launch script saved to ${LAUNCH_SCRIPT}"
 

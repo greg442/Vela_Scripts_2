@@ -1,0 +1,89 @@
+title: "VELA — Executive Intelligence Dashboard"
+description: "Hannah's live operational intelligence. Powered by SQLite."
+databases:
+  hannah:
+    title: "Hannah Intelligence"
+    queries:
+      priority_stack:
+        title: "Priority Stack"
+        description: "Active priorities ranked by urgency and momentum"
+        sql: |
+          SELECT p.rank, p.urgency, p.momentum, p.objective,
+            p.next_action, p.owner, p.deadline,
+            e.name AS entity, e.status AS entity_status
+          FROM priorities p
+          LEFT JOIN entities e ON p.entity_id = e.id
+          ORDER BY p.rank ASC
+      deal_pipeline:
+        title: "Deal Pipeline"
+        description: "Active deals by status — stall alerts included"
+        sql: |
+          SELECT e.name AS deal, e.status, e.context, e.tags,
+            e.last_updated,
+            CAST((julianday('now') - julianday(e.last_updated)) AS INTEGER) AS days_since_update
+          FROM entities e
+          WHERE e.type = 'deal'
+          ORDER BY days_since_update DESC
+      relationship_radar:
+        title: "Relationship Radar"
+        description: "People by status — drift and attention signals"
+        sql: |
+          SELECT e.name, e.status, e.tags, e.context, e.last_updated,
+            CAST((julianday('now') - julianday(e.last_updated)) AS INTEGER) AS days_since_update,
+            COUNT(s.id) AS signal_count_30d
+          FROM entities e
+          LEFT JOIN signals s ON s.entity_id = e.id
+            AND s.ts >= datetime('now', '-30 days')
+          WHERE e.type = 'person'
+          GROUP BY e.id
+          ORDER BY days_since_update DESC
+      signal_feed:
+        title: "Signal Feed"
+        description: "Latest signals evaluated by Hannah — last 30 days"
+        sql: |
+          SELECT s.ts, s.signal_type, s.ium_score, s.source,
+            e.name AS entity, s.summary, s.action_taken
+          FROM signals s
+          LEFT JOIN entities e ON s.entity_id = e.id
+          WHERE s.ts >= datetime('now', '-30 days')
+          ORDER BY s.ts DESC
+          LIMIT 100
+      open_decisions:
+        title: "Open Decisions"
+        description: "Strategic decisions pending resolution"
+        sql: |
+          SELECT d.ts, d.title, d.context, d.decision,
+            d.rationale, d.revisit_date, d.status, e.name AS entity
+          FROM decisions d
+          LEFT JOIN entities e ON d.entity_id = e.id
+          WHERE d.status = 'active'
+          ORDER BY d.ts DESC
+      memory_bank:
+        title: "Memory Bank"
+        description: "Persistent facts, rules, and corrections"
+        sql: |
+          SELECT m.category, m.key, m.value, m.source, m.ts
+          FROM memory m
+          ORDER BY m.category ASC, m.ts DESC
+      momentum_summary:
+        title: "Momentum — Hot Entities (30d)"
+        description: "Entities with most signal activity in last 30 days"
+        sql: |
+          SELECT e.name, e.type, e.status,
+            COUNT(s.id) AS signal_count,
+            ROUND(AVG(s.ium_score), 1) AS avg_ium,
+            MAX(s.ium_score) AS peak_ium,
+            MAX(s.ts) AS last_signal,
+            GROUP_CONCAT(DISTINCT s.signal_type) AS signal_types
+          FROM signals s
+          JOIN entities e ON s.entity_id = e.id
+          WHERE s.ts >= datetime('now', '-30 days')
+          GROUP BY s.entity_id
+          ORDER BY avg_ium DESC, signal_count DESC
+          LIMIT 20
+settings:
+  default_page_size: 50
+  max_returned_rows: 500
+  sql_time_limit_ms: 5000
+  allow_download: on
+  allow_csv_stream: on

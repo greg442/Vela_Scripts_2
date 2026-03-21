@@ -8,7 +8,7 @@ Execute these steps at the start of every session. No skipping.
 
 1. **Stand-down check**
    `cat ~/.openclaw/.vela_standdown 2>/dev/null`
-   If file exists → send stand-down message to {{CLIENT_NAME}} and stop.
+   If file exists: send stand-down message to {{CLIENT_NAME}} and stop.
 
 2. **Tier check**
    `cat ~/.openclaw/.vela_tier`
@@ -16,38 +16,74 @@ Execute these steps at the start of every session. No skipping.
 
 3. **Read SOUL.md** — who you are
 
-4. **Read USER.md** — who {{CLIENT_NAME}} is
+4. **Read USER.md** — who {{CLIENT_NAME}} is, how they work, what they care about
 
-5. **Read MEMORY.md** — current context and active priorities
+5. **Read CORE.md** — all operating procedures, formats, proactive behaviors, rules
 
-6. **Read AGENTS.md** — your team and routing rules
+6. **Read AGENTS.md** — your team, routing rules, cost rules
 
-7. **Read DISPATCH_RULES.md** — operating rules
+7. **Read DISPATCH_RULES.md** — operating rules and routing logic
 
-8. **Read HEARTBEAT.md** — what to check and when
+8. **Read HEARTBEAT.md** — what to check proactively and when
 
-9. **Read shared/MEMORY.md** — team institutional memory
-   `cat ~/.openclaw/shared/MEMORY.md 2>/dev/null`
+9. **Read MEMORY.md** — current context, learned rules, corrections
+   (main sessions only — skip in subagent sessions)
 
-10. **Await instruction**
-    Do not volunteer unsolicited output at session start unless HEARTBEAT.md
-    has a pending check that is overdue.
+10. **Read memory/[TODAY].md** — today's session notes if exists
+    `cat ~/.openclaw/workspace-cos/memory/$(date +%Y-%m-%d).md 2>/dev/null`
+
+11. **Read memory/[YESTERDAY].md** — yesterday's notes if exists
+    `cat ~/.openclaw/workspace-cos/memory/$(date -v-1d +%Y-%m-%d).md 2>/dev/null`
+
+12. **Load live state from hannah.db**
+    `sqlite3 ~/.openclaw/hannah.db "SELECT rank, objective, urgency, momentum, deadline FROM priorities ORDER BY rank;"`
+    `sqlite3 ~/.openclaw/hannah.db "SELECT name, type, status, next_action, last_contact FROM entities WHERE status NOT IN ('closed','dormant') ORDER BY type, priority;"`
+    Purpose: current priorities and active entities before first response.
+    Note: Notion is not used. hannah.db is the only source of truth.
+
+13. **Read COMMITMENT_TRACKER.md** — every open commitment {{CLIENT_NAME}} has made
+    Check each Open item's deadline against today's date.
+    - Anything due within 72 hours: surface immediately in first response
+    - Anything overdue: flag immediately before responding to anything else
+
+14. **Read shared/MEMORY.md** — team institutional memory
+    `cat ~/.openclaw/shared/MEMORY.md 2>/dev/null`
+
+15. **Confirm ready**
+    - Telegram channel active
+    - Today's date registered
+    - Live state loaded from hannah.db
+    - Commitments checked against today's date
+    - Stand-down flag clear
+    - Await instruction
+
+Do not volunteer unsolicited output at session start unless a commitment
+is overdue, a heartbeat check is pending, or a critical flag was raised
+during startup.
 
 ## Session End
 
 When a task is complete:
 - Post deliverable to correct Telegram topic
-- Send {{CLIENT_NAME}} a 2–3 sentence DM summary
-- Send: "✅ Done. Type /new before your next task."
+- Send {{CLIENT_NAME}} a 2-3 sentence DM summary
+- Send: "Done. Type /new before your next task."
 - Update MEMORY.md if anything significant changed
+- Update hannah.db if a priority, entity, or commitment changed
 
 ## File Locations
+```
+~/.openclaw/workspace-cos/          this workspace
+~/.openclaw/workspace-cos/memory/   daily session notes
+~/.openclaw/shared/MEMORY.md        team institutional memory
+~/.openclaw/hannah.db               live intelligence database
+~/.openclaw/.vela_tier              license tier and capabilities
+~/.openclaw/.vela_standdown         stand-down flag (check on every boot)
+~/.openclaw/logs/                   system logs
+~/.openclaw/scripts/                automation scripts
+```
 
-```
-~/.openclaw/workspace-cos/     ← this workspace
-~/.openclaw/shared/MEMORY.md   ← team memory
-~/.openclaw/.vela_tier         ← license tier + capabilities
-~/.openclaw/.vela_standdown    ← stand-down flag (check on every boot)
-~/.openclaw/logs/              ← system logs
-~/.openclaw/scripts/           ← automation scripts
-```
+## Notes
+- Subagent sessions skip steps 9-13. Load task-specific context after steps 1-6 only.
+- If any memory file does not exist, skip it silently.
+- Notion is disabled. Do not reference or query it.
+- Source of truth for priorities and entities is hannah.db only.
